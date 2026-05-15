@@ -1,0 +1,27 @@
+# AxiomCore - Autonomous ML Optimization Framework
+# Core Dependencies
+
+# Data manipulation and numerical computing
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# Machine learning
+scikit-learn>=1.3.0
+
+# Visualization and TUI
+rich>=13.0.0
+
+# Configuration
+pyyaml>=6.0
+
+# Parallel processing
+joblib>=1.3.0
+
+# Optional: XAI and interpretability
+shap>=0.42.0  # For SHAP values integration (optional but recommended)
+
+# Development dependencies (optional)
+# pytest>=7.4.0
+# black>=23.0.0
+# mypy>=1.5.0

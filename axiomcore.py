@@ -79,6 +79,9 @@ class XAIConfig:
     permutation_repeats: int = 8
     drift_threshold: float = 0.15
     include_correlations: bool = True
+    # SHAP configuration
+    use_shap: bool = True  # Enable SHAP analysis (requires shap package)
+    shap_sample_size: int = 100  # Subsample for SHAP computation efficiency
 
 
 @dataclass
@@ -593,14 +596,54 @@ class SemanticDiagnostics:
             mi = mi_func(X, y, random_state=0)
             self._mi_cache[cache_key] = mi
 
-        report = pd.DataFrame(
-            {
-                "feature": names,
-                "perm_mean": perm.importances_mean,
-                "perm_std": perm.importances_std,
-                "mutual_info": mi,
-            }
-        ).sort_values("perm_mean", ascending=False)
+        # Build initial report
+        report_data = {
+            "feature": names,
+            "perm_mean": perm.importances_mean,
+            "perm_std": perm.importances_std,
+            "mutual_info": mi,
+        }
+
+        # Add SHAP analysis if enabled
+        if self.config.use_shap:
+            try:
+                import shap
+                
+                # Subsample for efficiency
+                sample_size = min(self.config.shap_sample_size, len(X))
+                sample_idx = np.random.choice(len(X), sample_size, replace=False)
+                X_sample = X[sample_idx]
+                
+                self.console.print(f"[dim]Computing SHAP values (sample size: {sample_size})...[/]")
+                
+                # Create appropriate explainer based on model type
+                if hasattr(est, 'tree_') or hasattr(est, 'estimators_'):
+                    # Tree-based models (RandomForest, GradientBoosting, etc.)
+                    explainer = shap.TreeExplainer(est)
+                    shap_values = explainer.shap_values(X_sample)
+                else:
+                    # Other models - use KernelExplainer (slower but model-agnostic)
+                    background = shap.sample(X_sample, min(50, len(X_sample)))
+                    explainer = shap.KernelExplainer(est.predict, background)
+                    shap_values = explainer.shap_values(X_sample)
+                
+                # Handle multi-class classification (shap_values is a list)
+                if isinstance(shap_values, list):
+                    # For multi-class, average absolute SHAP values across classes
+                    shap_importance = np.mean([np.abs(sv).mean(axis=0) for sv in shap_values], axis=0)
+                else:
+                    # For binary classification or regression
+                    shap_importance = np.abs(shap_values).mean(axis=0)
+                
+                report_data["shap_importance"] = shap_importance
+                self.console.print("[dim]SHAP analysis complete[/]")
+                
+            except ImportError:
+                self.console.print("[yellow]SHAP package not available, skipping SHAP analysis[/]")
+            except Exception as e:
+                self.console.print(f"[yellow]SHAP analysis failed: {type(e).__name__}, skipping[/]")
+
+        report = pd.DataFrame(report_data).sort_values("perm_mean", ascending=False)
 
         if self.config.include_correlations and n_features <= 64:
             corr_target = []
