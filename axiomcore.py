@@ -21,6 +21,7 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Seque
 import numpy as np
 import pandas as pd
 import yaml
+from joblib import Parallel, delayed
 from rich import box
 from rich.align import Align
 from rich.console import Console, Group
@@ -67,6 +68,9 @@ class HPOConfig:
     patience: int = 5  # Stop after N trials without improvement
     min_delta: float = 0.001  # Minimum improvement threshold
     enable_early_stop: bool = True
+    # Parallel execution parameters
+    parallel_trials: int = 4  # Number of trials to run in parallel (0 = sequential)
+    n_jobs: int = -1  # Number of CPU cores for joblib (-1 = all cores)
 
 
 @dataclass
@@ -187,6 +191,64 @@ def _holdout_metrics(
 # ---------------------------------------------------------------------------
 
 
+def _evaluate_trial_standalone(
+    trial_id: int,
+    seed: int,
+    space: Mapping[str, Any],
+    estimator: BaseEstimator,
+    X: np.ndarray,
+    y: np.ndarray,
+    cv_folds: int,
+    scoring: Optional[str],
+    task: str,
+    random_state: int,
+) -> Tuple[int, Dict[str, Any], float, float]:
+    """
+    Standalone function for parallel trial evaluation.
+    Must be at module level to be picklable by joblib.
+    """
+    t0 = time.perf_counter()
+    
+    # Create trial-specific RNG for reproducibility
+    trial_rng = np.random.default_rng(seed)
+    
+    # Sample parameters using trial-specific RNG
+    params: Dict[str, Any] = {}
+    for key, spec in space.items():
+        if isinstance(spec, list):
+            params[key] = spec[int(trial_rng.integers(0, len(spec)))]
+        elif isinstance(spec, dict):
+            low, high = float(spec["low"]), float(spec["high"])
+            if spec.get("log", False):
+                params[key] = float(np.exp(trial_rng.uniform(np.log(low), np.log(high))))
+            elif spec.get("type") == "int":
+                params[key] = int(trial_rng.integers(int(low), int(high) + 1))
+            else:
+                params[key] = float(trial_rng.uniform(low, high))
+        else:
+            params[key] = spec
+    
+    # Evaluate parameters
+    est = clone(estimator)
+    est.set_params(**params)
+    pipe = Pipeline([("scaler", StandardScaler()), ("model", est)])
+    scoring_metric = scoring or _default_scorer(task)
+    cv = StratifiedKFold(
+        n_splits=cv_folds,
+        shuffle=True,
+        random_state=random_state,
+    ) if task == "classification" else cv_folds
+    
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        scores = cross_val_score(pipe, X, y, cv=cv, scoring=scoring_metric, n_jobs=1)
+    
+    score = float(np.mean(scores))
+    elapsed = time.perf_counter() - t0
+    
+    return trial_id, params, score, elapsed
+
+
 class HyperparameterAutopilot:
     """
     Autonomous hyperparameter search with trial logging and convergence tracking.
@@ -303,6 +365,20 @@ class HyperparameterAutopilot:
         space: Mapping[str, Any],
         on_trial: Optional[Callable[[int, float, Dict], None]],
     ) -> None:
+        # Use parallel execution if configured
+        if self.config.parallel_trials > 1:
+            self._fit_random_parallel(X, y, space, on_trial)
+        else:
+            self._fit_random_sequential(X, y, space, on_trial)
+
+    def _fit_random_sequential(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        space: Mapping[str, Any],
+        on_trial: Optional[Callable[[int, float, Dict], None]],
+    ) -> None:
+        """Sequential random search (original implementation)."""
         for trial in range(1, self.config.n_trials + 1):
             t0 = time.perf_counter()
             params = self._sample_params(space)
@@ -316,6 +392,52 @@ class HyperparameterAutopilot:
             if self._check_early_stop():
                 self.console.print(f"[yellow]Early stopping at trial {trial}/{self.config.n_trials} (no improvement for {self.config.patience} trials)[/]")
                 break
+
+    def _fit_random_parallel(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        space: Mapping[str, Any],
+        on_trial: Optional[Callable[[int, float, Dict], None]],
+    ) -> None:
+        """Parallel random search with batch evaluation."""
+        try:
+            batch_size = self.config.parallel_trials
+            
+            # Process trials in batches
+            for batch_start in range(1, self.config.n_trials + 1, batch_size):
+                batch_end = min(batch_start + batch_size, self.config.n_trials + 1)
+                trial_ids = list(range(batch_start, batch_end))
+                
+                # Generate seeds for reproducibility
+                seeds = [self.config.random_state + tid for tid in trial_ids]
+                
+                # Parallel evaluation using standalone function
+                self.console.print(f"[dim]Evaluating trials {batch_start}-{batch_end-1} in parallel...[/]")
+                results = Parallel(n_jobs=self.config.n_jobs, backend='loky')(
+                    delayed(_evaluate_trial_standalone)(
+                        tid, seed, space, self.estimator, X, y,
+                        self.config.cv_folds, self.config.scoring,
+                        self.task, self.config.random_state
+                    ) for tid, seed in zip(trial_ids, seeds)
+                )
+                
+                # Log results in order
+                for trial_id, params, score, elapsed in sorted(results, key=lambda x: x[0]):
+                    self._log_trial(trial_id, params, score, elapsed)
+                    self._best_score_history.append(self.best_score_)
+                    if on_trial:
+                        on_trial(trial_id, score, params)
+                
+                # Check early stopping after each batch
+                if self._check_early_stop():
+                    self.console.print(f"[yellow]Early stopping at trial {trial_id}/{self.config.n_trials} (no improvement for {self.config.patience} trials)[/]")
+                    break
+        
+        except Exception as e:
+            # Fallback to sequential execution on any error
+            self.console.print(f"[yellow]Parallel execution failed ({type(e).__name__}), falling back to sequential mode[/]")
+            self._fit_random_sequential(X, y, space, on_trial)
 
     def _continuous_bounds(self, space: Mapping[str, Any]) -> Tuple[List[Tuple[float, float]], List[str], List[Mapping]]:
         bounds: List[Tuple[float, float]] = []
