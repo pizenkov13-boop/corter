@@ -10,6 +10,7 @@ Modules:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import time
 import warnings
@@ -62,6 +63,10 @@ class HPOConfig:
     scoring: Optional[str] = None  # auto from task
     random_state: int = 42
     search_space: Dict[str, Any] = field(default_factory=dict)
+    # Early stopping parameters
+    patience: int = 5  # Stop after N trials without improvement
+    min_delta: float = 0.001  # Minimum improvement threshold
+    enable_early_stop: bool = True
 
 
 @dataclass
@@ -208,6 +213,9 @@ class HyperparameterAutopilot:
         self.best_score_: float = float("-inf")
         self.best_estimator_: Optional[BaseEstimator] = None
         self._rng = np.random.default_rng(config.random_state)
+        # Early stopping tracking
+        self._no_improvement_count: int = 0
+        self._best_score_history: List[float] = []
 
     def _cv_score(self, params: Mapping[str, Any], X: np.ndarray, y: np.ndarray) -> float:
         est = clone(self.estimator)
@@ -249,6 +257,19 @@ class HyperparameterAutopilot:
             self.best_params_ = dict(params)
             self.best_estimator_ = clone(self.estimator).set_params(**params)
 
+    def _check_early_stop(self) -> bool:
+        """Check if early stopping criteria met."""
+        if not self.config.enable_early_stop or len(self._best_score_history) < 2:
+            return False
+        
+        recent_improvement = self._best_score_history[-1] - self._best_score_history[-2]
+        if recent_improvement < self.config.min_delta:
+            self._no_improvement_count += 1
+        else:
+            self._no_improvement_count = 0
+        
+        return self._no_improvement_count >= self.config.patience
+
     def fit(self, X: np.ndarray, y: np.ndarray, on_trial: Optional[Callable[[int, float, Dict], None]] = None) -> "HyperparameterAutopilot":
         space = self.config.search_space
         if not space:
@@ -287,8 +308,14 @@ class HyperparameterAutopilot:
             params = self._sample_params(space)
             score = self._cv_score(params, X, y)
             self._log_trial(trial, params, score, time.perf_counter() - t0)
+            self._best_score_history.append(self.best_score_)
             if on_trial:
                 on_trial(trial, score, params)
+            
+            # Check early stopping
+            if self._check_early_stop():
+                self.console.print(f"[yellow]Early stopping at trial {trial}/{self.config.n_trials} (no improvement for {self.config.patience} trials)[/]")
+                break
 
     def _continuous_bounds(self, space: Mapping[str, Any]) -> Tuple[List[Tuple[float, float]], List[str], List[Mapping]]:
         bounds: List[Tuple[float, float]] = []
@@ -394,6 +421,14 @@ class SemanticDiagnostics:
         self.feature_report_: pd.DataFrame = pd.DataFrame()
         self.insights_: List[str] = []
         self.drift_scores_: Dict[str, float] = {}
+        # Computation cache for expensive operations
+        self._perm_cache: Dict[str, Any] = {}
+        self._mi_cache: Dict[str, np.ndarray] = {}
+
+    def _cache_key(self, X: np.ndarray, y: np.ndarray) -> str:
+        """Generate cache key from data hash."""
+        data_hash = hashlib.md5(X.tobytes() + y.tobytes()).hexdigest()
+        return f"{data_hash}_{self.config.permutation_repeats}"
 
     def analyze(
         self,
@@ -409,19 +444,32 @@ class SemanticDiagnostics:
         est = model.named_steps["model"] if isinstance(model, Pipeline) else model
         fitted = model if isinstance(model, Pipeline) else model
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            perm = permutation_importance(
-                fitted,
-                X,
-                y,
-                n_repeats=self.config.permutation_repeats,
-                random_state=0,
-                n_jobs=-1,
-            )
+        # Check cache for permutation importance
+        cache_key = self._cache_key(X, y)
+        if cache_key in self._perm_cache:
+            perm = self._perm_cache[cache_key]
+            self.console.print("[dim]Using cached permutation importance[/]")
+        else:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                perm = permutation_importance(
+                    fitted,
+                    X,
+                    y,
+                    n_repeats=self.config.permutation_repeats,
+                    random_state=0,
+                    n_jobs=-1,
+                )
+            self._perm_cache[cache_key] = perm
 
-        mi_func = mutual_info_classif if self.task == "classification" else mutual_info_regression
-        mi = mi_func(X, y, random_state=0)
+        # Check cache for mutual information
+        if cache_key in self._mi_cache:
+            mi = self._mi_cache[cache_key]
+            self.console.print("[dim]Using cached mutual information[/]")
+        else:
+            mi_func = mutual_info_classif if self.task == "classification" else mutual_info_regression
+            mi = mi_func(X, y, random_state=0)
+            self._mi_cache[cache_key] = mi
 
         report = pd.DataFrame(
             {
@@ -550,6 +598,30 @@ class AxiomDashboard:
         self._metrics: Dict[str, float] = {}
         self._insights: List[str] = []
         self._trials: pd.DataFrame = pd.DataFrame()
+        self._score_history: List[float] = []
+
+    def _create_sparkline(self, values: List[float], width: int = 40) -> str:
+        """Create ASCII sparkline from values using Unicode block characters."""
+        if not values or len(values) < 2:
+            return "─" * width
+        
+        min_val, max_val = min(values), max(values)
+        if max_val == min_val:
+            return "─" * width
+        
+        # Unicode block characters for sparkline
+        blocks = "▁▂▃▄▅▆▇█"
+        normalized = [(v - min_val) / (max_val - min_val) for v in values]
+        
+        # Resample to fit width
+        step = len(values) / width
+        sparkline = ""
+        for i in range(width):
+            idx = min(int(i * step), len(values) - 1)
+            block_idx = min(int(normalized[idx] * (len(blocks) - 1)), len(blocks) - 1)
+            sparkline += blocks[block_idx]
+        
+        return sparkline
 
     def _build_layout(self) -> Layout:
         layout = Layout(name="root")
@@ -580,6 +652,13 @@ class AxiomDashboard:
         if self._trials.empty:
             table.add_row("—", "—", "—", "awaiting trials…")
             return table
+
+        # Add sparkline caption if we have score history
+        if len(self._score_history) > 1:
+            sparkline = self._create_sparkline(self._score_history, width=50)
+            min_score = min(self._score_history)
+            max_score = max(self._score_history)
+            table.caption = f"Score trend: {sparkline} [{min_score:.4f} → {max_score:.4f}]"
 
         tail = self._trials.tail(8)
         param_cols = [c for c in tail.columns if c not in {"trial", "score", "elapsed_s"}]
@@ -635,6 +714,7 @@ class AxiomDashboard:
     def on_trial(self, trial: int, score: float, trials: pd.DataFrame) -> None:
         self._best_score = float(trials["score"].max()) if not trials.empty else score
         self._trials = trials.copy()
+        self._score_history.append(score)
         self._progress.update(self._trial_task, completed=trial)
 
     def set_insights(self, insights: Sequence[str], metrics: Optional[Mapping[str, float]] = None) -> None:
