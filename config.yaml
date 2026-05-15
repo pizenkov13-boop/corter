@@ -1,0 +1,32 @@
+# AxiomCore example configuration
+task: auto
+target_column: target
+
+model:
+  name: random_forest
+  params:
+    n_estimators: 100
+
+hpo:
+  strategy: random
+  n_trials: 16
+  cv_folds: 3
+  search_space:
+    n_estimators:
+      low: 80
+      high: 200
+      type: int
+    max_depth: [4, 8, 12, null]
+    min_samples_leaf:
+      low: 1
+      high: 6
+      type: int
+
+xai:
+  top_k_features: 8
+  permutation_repeats: 5
+  drift_threshold: 0.12
+
+tui:
+  refresh_hz: 4
+  show_live: true
