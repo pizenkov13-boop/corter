@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AxiomCore Dashboard</title>
+    <title>AxiomCore Dashboard - ML Optimization Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,128 +12,316 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --bg-primary: #32444E;
+            --bg-secondary: #3d5159;
+            --bg-card: #2a3940;
+            --accent: #FEFD02;
+            --accent-dim: rgba(254, 253, 2, 0.1);
+            --accent-glow: rgba(254, 253, 2, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #b8c5cc;
+            --text-muted: #7a8a94;
+            --border: rgba(255, 255, 255, 0.1);
+            --success: #00ff88;
+            --error: #ff4757;
+            --warning: #ffa502;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            padding: 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 0;
             min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background gradient */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(254, 253, 2, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(254, 253, 2, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
-        }
-
-        .header {
-            background: white;
             padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
-            text-align: center;
+            position: relative;
+            z-index: 1;
         }
 
-        .header h1 {
-            color: #667eea;
-            font-size: 2.5em;
-            margin-bottom: 10px;
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+            padding: 40px 50px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
 
-        .header p {
-            color: #666;
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--accent-dim) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            font-size: 2.8em;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+
+        .header-left p {
+            color: var(--text-secondary);
             font-size: 1.1em;
+            font-weight: 400;
         }
 
         .status-badge {
-            display: inline-block;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            margin-top: 10px;
-            font-size: 0.9em;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.95em;
+            border: 2px solid;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .status-idle { background: #e0e0e0; color: #666; }
-        .status-running { background: #4caf50; color: white; animation: pulse 2s infinite; }
-        .status-complete { background: #2196f3; color: white; }
-        .status-error { background: #f44336; color: white; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+        .status-idle {
+            background: rgba(122, 138, 148, 0.2);
+            border-color: var(--text-muted);
+            color: var(--text-muted);
         }
 
+        .status-running {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+            animation: pulse-glow 2s infinite;
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .status-complete {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .status-error {
+            background: rgba(255, 71, 87, 0.1);
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 30px var(--accent-glow); }
+            50% { box-shadow: 0 0 50px var(--accent-glow); }
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* Grid Layout */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
         }
 
+        .grid-full {
+            grid-column: 1 / -1;
+        }
+
+        /* Cards */
         .card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-color: rgba(254, 253, 2, 0.3);
+        }
+
+        .card:hover::before {
+            opacity: 1;
         }
 
         .card h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
+            color: var(--text-primary);
+            margin-bottom: 25px;
+            font-size: 1.4em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.5px;
         }
 
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        /* Metrics */
         .metric {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
+            padding: 18px 0;
+            border-bottom: 1px solid var(--border);
+            transition: all 0.2s ease;
         }
 
         .metric:last-child {
             border-bottom: none;
         }
 
+        .metric:hover {
+            padding-left: 10px;
+            background: var(--accent-dim);
+            margin: 0 -10px;
+            padding-left: 20px;
+            padding-right: 10px;
+            border-radius: 10px;
+        }
+
         .metric-label {
-            color: #666;
+            color: var(--text-secondary);
             font-weight: 500;
+            font-size: 0.95em;
         }
 
         .metric-value {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #667eea;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.5px;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin: 25px 0;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            font-weight: 500;
         }
 
         .progress-bar {
             width: 100%;
-            height: 30px;
-            background: #e0e0e0;
-            border-radius: 15px;
+            height: 12px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
             overflow: hidden;
-            margin: 15px 0;
             position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
+            background: linear-gradient(90deg, var(--accent) 0%, #fff700 100%);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: 0 0 20px var(--accent-glow);
         }
 
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Chart Container */
         .chart-container {
             width: 100%;
-            height: 250px;
+            height: 280px;
             margin: 20px 0;
+            position: relative;
         }
 
         canvas {
@@ -140,175 +329,374 @@
             max-height: 100%;
         }
 
+        /* Sparkline */
+        .sparkline-container {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 1px solid var(--border);
+        }
+
+        .sparkline {
+            font-family: 'Courier New', monospace;
+            font-size: 1.3em;
+            letter-spacing: 3px;
+            color: var(--accent);
+            text-align: center;
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .sparkline-label {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            color: var(--text-muted);
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        /* Parameters Grid */
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .param-item {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .param-item:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .param-name {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .param-value {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1.1em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Feature List */
         .feature-list {
             list-style: none;
         }
 
         .feature-item {
-            padding: 12px;
-            margin: 8px 0;
-            background: #f5f5f5;
+            padding: 16px;
+            margin: 12px 0;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .feature-item:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        .feature-rank {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            color: var(--bg-primary);
             border-radius: 8px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.9em;
+            flex-shrink: 0;
         }
 
         .feature-name {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .feature-score {
-            font-weight: bold;
-            color: #667eea;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex-shrink: 0;
+            min-width: 120px;
         }
 
         .feature-bar {
             flex: 1;
             height: 8px;
-            background: #e0e0e0;
+            background: var(--bg-primary);
             border-radius: 4px;
-            margin: 0 15px;
             overflow: hidden;
+            position: relative;
         }
 
         .feature-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.3s ease;
+            background: linear-gradient(90deg, var(--accent) 0%, #fff700 100%);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px var(--accent-glow);
         }
 
+        .feature-score {
+            font-weight: 700;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+            min-width: 70px;
+            text-align: right;
+        }
+
+        /* Insights */
         .insights-list {
             list-style: none;
         }
 
         .insight-item {
-            padding: 12px;
-            margin: 8px 0;
-            background: #f0f7ff;
-            border-left: 4px solid #667eea;
-            border-radius: 4px;
-            color: #333;
+            padding: 18px 20px;
+            margin: 12px 0;
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border);
+            border-left-width: 4px;
         }
 
+        .insight-item:hover {
+            background: var(--bg-primary);
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .insight-item::before {
+            content: '💡';
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        /* Logs */
         .logs-container {
-            background: #1e1e1e;
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 8px;
+            background: #1a2329;
+            color: var(--accent);
+            padding: 20px;
+            border-radius: 12px;
             font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            max-height: 300px;
+            font-size: 0.85em;
+            max-height: 350px;
             overflow-y: auto;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .logs-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .logs-container::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 4px;
         }
 
         .log-entry {
-            padding: 4px 0;
-            border-bottom: 1px solid #333;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .log-time {
-            color: #888;
-            margin-right: 10px;
+            color: var(--text-muted);
+            margin-right: 12px;
+            font-weight: 600;
         }
 
-        .params-grid {
+        /* Stats Grid */
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
         }
 
-        .param-item {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 6px;
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: all 0.3s ease;
         }
 
-        .param-name {
-            font-size: 0.85em;
-            color: #666;
-            margin-bottom: 5px;
+        .stat-card:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent);
+            transform: translateY(-5px);
         }
 
-        .param-value {
-            font-weight: bold;
-            color: #333;
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-variant-numeric: tabular-nums;
         }
 
-        .sparkline {
-            font-family: monospace;
-            font-size: 1.2em;
-            letter-spacing: 2px;
-            color: #667eea;
-            margin: 10px 0;
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
         }
 
-        @media (max-width: 768px) {
+        /* Responsive */
+        @media (max-width: 1200px) {
             .grid {
                 grid-template-columns: 1fr;
             }
-            
-            .header h1 {
-                font-size: 1.8em;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
             }
+            
+            .header {
+                padding: 25px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .header-left h1 {
+                font-size: 2em;
+            }
+
+            .params-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚡ AxiomCore Dashboard</h1>
-            <p>Autonomous ML Optimization Framework</p>
-            <span id="status-badge" class="status-badge status-idle">Idle</span>
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>⚡ AxiomCore</h1>
+                    <p>Autonomous ML Optimization Platform</p>
+                </div>
+                <div class="header-right">
+                    <span id="status-badge" class="status-badge status-idle">
+                        <span class="status-dot"></span>
+                        <span>Idle</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-trials">0</div>
+                <div class="stat-label">Trials Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-best-score">0.0000</div>
+                <div class="stat-label">Best Score</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-elapsed">0s</div>
+                <div class="stat-label">Elapsed Time</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-speed">0.0</div>
+                <div class="stat-label">Trials/Sec</div>
+            </div>
         </div>
 
         <div class="grid">
             <!-- HPO Progress Card -->
             <div class="card">
-                <h2>🚀 HPO Progress</h2>
+                <h2>🚀 Optimization Progress</h2>
+                
                 <div class="metric">
                     <span class="metric-label">Strategy</span>
                     <span class="metric-value" id="hpo-strategy">-</span>
                 </div>
-                <div class="metric">
-                    <span class="metric-label">Current Trial</span>
-                    <span class="metric-value" id="hpo-current-trial">0 / 0</span>
+                
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span id="progress-text">0 / 0 trials</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="hpo-progress" style="width: 0%"></div>
+                    </div>
                 </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="hpo-progress" style="width: 0%">0%</div>
+
+                <div class="sparkline-container">
+                    <div class="sparkline" id="score-sparkline">▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</div>
+                    <div class="sparkline-label">
+                        <span>Score Trend</span>
+                        <span id="score-range">0.0000 → 0.0000</span>
+                    </div>
                 </div>
-                <div class="metric">
-                    <span class="metric-label">Best Score</span>
-                    <span class="metric-value" id="hpo-best-score">0.0000</span>
-                </div>
+
                 <div class="metric">
                     <span class="metric-label">Current Score</span>
                     <span class="metric-value" id="hpo-current-score">0.0000</span>
                 </div>
-                <div class="metric">
-                    <span class="metric-label">Elapsed Time</span>
-                    <span class="metric-value" id="hpo-elapsed">0s</span>
-                </div>
-                <div class="sparkline" id="score-sparkline">▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁</div>
             </div>
 
-            <!-- System Metrics Card -->
+            <!-- Chart Card -->
             <div class="card">
-                <h2>📊 System Metrics</h2>
-                <div class="metric">
-                    <span class="metric-label">CPU Usage</span>
-                    <span class="metric-value" id="cpu-usage">0%</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Memory Usage</span>
-                    <span class="metric-value" id="memory-usage">0 MB</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Trials/Second</span>
-                    <span class="metric-value" id="trials-per-sec">0.0</span>
-                </div>
+                <h2>📈 Performance Chart</h2>
                 <div class="chart-container">
                     <canvas id="score-chart"></canvas>
                 </div>
@@ -316,29 +704,31 @@
         </div>
 
         <div class="grid">
-            <!-- Current Parameters Card -->
+            <!-- Current Parameters -->
             <div class="card">
                 <h2>⚙️ Current Parameters</h2>
                 <div class="params-grid" id="current-params">
                     <div class="param-item">
-                        <div class="param-name">No parameters yet</div>
+                        <div class="param-name">Waiting</div>
+                        <div class="param-value">-</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Best Parameters Card -->
+            <!-- Best Parameters -->
             <div class="card">
                 <h2>🏆 Best Parameters</h2>
                 <div class="params-grid" id="best-params">
                     <div class="param-item">
-                        <div class="param-name">No parameters yet</div>
+                        <div class="param-name">Waiting</div>
+                        <div class="param-value">-</div>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="grid">
-            <!-- XAI Insights Card -->
+            <!-- Feature Importance -->
             <div class="card">
                 <h2>🔍 Feature Importance</h2>
                 <ul class="feature-list" id="feature-list">
@@ -348,22 +738,22 @@
                 </ul>
             </div>
 
-            <!-- Insights Card -->
+            <!-- Insights -->
             <div class="card">
-                <h2>💡 Insights</h2>
+                <h2>💡 AI Insights</h2>
                 <ul class="insights-list" id="insights-list">
-                    <li class="insight-item">Waiting for analysis...</li>
+                    <li class="insight-item">Waiting for analysis to begin...</li>
                 </ul>
             </div>
         </div>
 
-        <!-- Logs Card -->
-        <div class="card">
-            <h2>📝 Logs</h2>
+        <!-- Logs -->
+        <div class="card grid-full">
+            <h2>📝 System Logs</h2>
             <div class="logs-container" id="logs-container">
                 <div class="log-entry">
                     <span class="log-time">[00:00:00]</span>
-                    <span>Dashboard initialized. Waiting for optimization to start...</span>
+                    <span>Dashboard initialized. Ready for optimization...</span>
                 </div>
             </div>
         </div>
@@ -371,7 +761,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script>
-        // Chart.js setup
+        // Chart.js setup with dark theme
         const ctx = document.getElementById('score-chart').getContext('2d');
         const scoreChart = new Chart(ctx, {
             type: 'line',
@@ -380,10 +770,19 @@
                 datasets: [{
                     label: 'CV Score',
                     data: [],
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderColor: '#FEFD02',
+                    backgroundColor: 'rgba(254, 253, 2, 0.1)',
                     tension: 0.4,
-                    fill: true
+                    fill: true,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#FEFD02',
+                    pointBorderColor: '#32444E',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#FEFD02',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
                 }]
             },
             options: {
@@ -392,59 +791,105 @@
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#2a3940',
+                        titleColor: '#FEFD02',
+                        bodyColor: '#ffffff',
+                        borderColor: '#FEFD02',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Score: ' + context.parsed.y.toFixed(4);
+                            }
+                        }
                     }
                 },
                 scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#7a8a94',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
                     y: {
-                        beginAtZero: false
+                        beginAtZero: false,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#7a8a94',
+                            font: {
+                                size: 11
+                            },
+                            callback: function(value) {
+                                return value.toFixed(3);
+                            }
+                        }
                     }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
                 }
             }
         });
 
         // Update functions
         function updateDashboard(data) {
-            // Update HPO Progress
             const hpo = data.hpo_progress;
+            
+            // Update stats
+            document.getElementById('stat-trials').textContent = hpo.current_trial;
+            document.getElementById('stat-best-score').textContent = hpo.best_score.toFixed(4);
+            document.getElementById('stat-elapsed').textContent = `${Math.floor(hpo.elapsed_time)}s`;
+            document.getElementById('stat-speed').textContent = data.system_metrics.trials_per_second.toFixed(2);
+            
+            // Update HPO
             document.getElementById('hpo-strategy').textContent = hpo.strategy || '-';
-            document.getElementById('hpo-current-trial').textContent = `${hpo.current_trial} / ${hpo.total_trials}`;
-            document.getElementById('hpo-best-score').textContent = hpo.best_score.toFixed(4);
+            document.getElementById('progress-text').textContent = `${hpo.current_trial} / ${hpo.total_trials} trials`;
             document.getElementById('hpo-current-score').textContent = hpo.current_score.toFixed(4);
-            document.getElementById('hpo-elapsed').textContent = `${Math.floor(hpo.elapsed_time)}s`;
             
             const progress = hpo.total_trials > 0 ? (hpo.current_trial / hpo.total_trials * 100) : 0;
-            const progressBar = document.getElementById('hpo-progress');
-            progressBar.style.width = `${progress}%`;
-            progressBar.textContent = `${Math.round(progress)}%`;
+            document.getElementById('hpo-progress').style.width = `${progress}%`;
+            document.getElementById('progress-percent').textContent = `${Math.round(progress)}%`;
 
             // Update status badge
             const statusBadge = document.getElementById('status-badge');
+            const statusText = hpo.status.charAt(0).toUpperCase() + hpo.status.slice(1);
             statusBadge.className = `status-badge status-${hpo.status}`;
-            statusBadge.textContent = hpo.status.charAt(0).toUpperCase() + hpo.status.slice(1);
+            statusBadge.innerHTML = `<span class="status-dot"></span><span>${statusText}</span>`;
 
             // Update sparkline
             if (hpo.score_history && hpo.score_history.length > 0) {
-                document.getElementById('score-sparkline').textContent = createSparkline(hpo.score_history);
+                const sparkline = createSparkline(hpo.score_history);
+                document.getElementById('score-sparkline').textContent = sparkline;
+                const min = Math.min(...hpo.score_history);
+                const max = Math.max(...hpo.score_history);
+                document.getElementById('score-range').textContent = `${min.toFixed(4)} → ${max.toFixed(4)}`;
             }
 
             // Update chart
             if (hpo.score_history && hpo.score_history.length > 0) {
-                scoreChart.data.labels = hpo.score_history.map((_, i) => i + 1);
+                scoreChart.data.labels = hpo.score_history.map((_, i) => `Trial ${i + 1}`);
                 scoreChart.data.datasets[0].data = hpo.score_history;
                 scoreChart.update('none');
             }
-
-            // Update system metrics
-            const metrics = data.system_metrics;
-            document.getElementById('cpu-usage').textContent = `${metrics.cpu_percent.toFixed(1)}%`;
-            document.getElementById('memory-usage').textContent = `${Math.round(metrics.memory_mb)} MB`;
-            document.getElementById('trials-per-sec').textContent = metrics.trials_per_second.toFixed(2);
 
             // Update parameters
             updateParams('current-params', hpo.current_params);
             updateParams('best-params', hpo.best_params);
 
-            // Update XAI insights
+            // Update XAI
             updateFeatures(data.xai_insights);
             updateInsights(data.xai_insights.insights);
 
@@ -469,7 +914,7 @@
         function updateParams(elementId, params) {
             const container = document.getElementById(elementId);
             if (!params || Object.keys(params).length === 0) {
-                container.innerHTML = '<div class="param-item"><div class="param-name">No parameters yet</div></div>';
+                container.innerHTML = '<div class="param-item"><div class="param-name">Waiting</div><div class="param-value">-</div></div>';
                 return;
             }
             
@@ -488,11 +933,12 @@
                 return;
             }
             
-            list.innerHTML = xai.top_features.map(feature => {
+            list.innerHTML = xai.top_features.map((feature, index) => {
                 const score = feature.importance || 0;
                 const percentage = (score * 100).toFixed(1);
                 return `
                     <li class="feature-item">
+                        <div class="feature-rank">${index + 1}</div>
                         <span class="feature-name">${feature.name}</span>
                         <div class="feature-bar">
                             <div class="feature-bar-fill" style="width: ${percentage}%"></div>
@@ -506,7 +952,7 @@
         function updateInsights(insights) {
             const list = document.getElementById('insights-list');
             if (!insights || insights.length === 0) {
-                list.innerHTML = '<li class="insight-item">Waiting for analysis...</li>';
+                list.innerHTML = '<li class="insight-item">Waiting for analysis to begin...</li>';
                 return;
             }
             
@@ -519,7 +965,7 @@
             const container = document.getElementById('logs-container');
             if (!logs || logs.length === 0) return;
             
-            container.innerHTML = logs.slice(-20).reverse().map(log => {
+            container.innerHTML = logs.slice(-30).reverse().map(log => {
                 const time = new Date(log.timestamp * 1000).toLocaleTimeString();
                 return `
                     <div class="log-entry">
@@ -543,7 +989,7 @@
 
         // Initial fetch and set interval
         fetchData();
-        setInterval(fetchData, 1000); // Update every second
+        setInterval(fetchData, 1000);
     </script>
 </body>
 </html>
