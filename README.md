@@ -183,6 +183,21 @@ The web dashboard provides:
 - 📈 System metrics (CPU, memory, trials/sec)
 - 📝 Live logs with timestamps
 
+### Deploy to Railway (Cloud Hosting)
+
+AxiomCore web dashboard is ready for cloud deployment!
+
+**Quick Deploy:**
+1. Push your code to GitHub
+2. Connect to [Railway](https://railway.app)
+3. Railway will automatically detect the `Procfile` and deploy
+4. Your dashboard will be live at `https://your-app.railway.app`
+
+**Configuration:**
+- `Procfile` - Configured for gunicorn with 2 workers
+- `requirements.txt` - Includes gunicorn for production
+- Auto-scaling ready with Railway's infrastructure
+
 ### Configuration Example
 
 Create a `config.yaml` file:
@@ -454,6 +469,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### Version 0.3.0 (Current)
 - [x] **Web-based dashboard** - Browser interface with real-time updates
 - [x] Flask REST API for remote monitoring
+- [x] **Railway deployment ready** - Procfile and gunicorn configured
 - [ ] Bayesian optimization (TPE/GP)
 - [ ] Distributed computing support (Dask/Ray)
 - [ ] AutoML integration
@@ -461,7 +477,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Version 0.4.0 (Planned)
 - [ ] GPU acceleration for deep learning
-- [ ] Cloud deployment options
 - [ ] Advanced web dashboard features (export, sharing)
 - [ ] Multi-objective optimization
 - [ ] Experiment tracking and comparison
