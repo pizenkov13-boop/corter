@@ -82,12 +82,21 @@ AxiomCore is a powerful, self-contained machine learning optimization framework 
 </tr>
 </table>
 
-### 📊 Terminal Dashboard (TUI)
+### 📊 Dashboard Options
 
-- **Live progress tracking** with real-time updates
-- **Score sparklines** for visual convergence feedback
-- **Rich formatting** with beautiful terminal output
-- **Resource monitoring** (CPU and memory usage)
+**Terminal Dashboard (TUI)**
+- Live progress tracking with real-time updates
+- Score sparklines for visual convergence feedback
+- Rich formatting with beautiful terminal output
+- Resource monitoring (CPU and memory usage)
+
+**Web Dashboard (NEW!)**
+- Browser-based interface at `http://127.0.0.1:5000`
+- Real-time HPO progress visualization
+- Interactive charts with Chart.js
+- Feature importance analysis
+- System metrics monitoring
+- Live logs and insights
 
 ---
 
@@ -130,7 +139,7 @@ shap>=0.42.0
 
 ## 🚀 Quick Start
 
-### Basic Usage
+### Basic Usage (Terminal)
 
 ```python
 from axiomcore import AxiomCore
@@ -149,6 +158,30 @@ print(f"Best Params: {result['best_params']}")
 for insight in result['insights']:
     print(f"  • {insight}")
 ```
+
+### Web Dashboard Usage (NEW!)
+
+**Step 1: Start the web dashboard**
+```bash
+# In terminal 1
+python web_ui.py
+```
+
+**Step 2: Run optimization with web integration**
+```bash
+# In terminal 2
+python axiomcore_web.py config.yaml data.csv
+```
+
+**Step 3: View in browser**
+Open `http://127.0.0.1:5000` to see real-time progress!
+
+The web dashboard provides:
+- 📊 Real-time HPO progress with interactive charts
+- 🔍 Feature importance visualization
+- 💡 Live insights and recommendations
+- 📈 System metrics (CPU, memory, trials/sec)
+- 📝 Live logs with timestamps
 
 ### Configuration Example
 
@@ -293,6 +326,7 @@ tui:
 - 📄 [**Technical Report**](TECHNICAL_REPORT.md) - Comprehensive implementation details
 - 🔧 [**Optimization Guide**](AXIOMCORE_IMPROVEMENTS.md) - Performance tuning recommendations
 - 📋 [**Requirements**](requirements.txt) - Complete dependency list
+- 🌐 [**Web Dashboard**](web_ui.py) - Browser-based monitoring interface
 
 ---
 
@@ -417,19 +451,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🗺️ Roadmap
 
-### Version 0.3.0 (Planned)
+### Version 0.3.0 (Current)
+- [x] **Web-based dashboard** - Browser interface with real-time updates
+- [x] Flask REST API for remote monitoring
 - [ ] Bayesian optimization (TPE/GP)
 - [ ] Distributed computing support (Dask/Ray)
 - [ ] AutoML integration
-- [ ] Interactive visualizations (Plotly)
 - [ ] Model persistence and versioning
 
-### Version 0.4.0 (Future)
+### Version 0.4.0 (Planned)
 - [ ] GPU acceleration for deep learning
 - [ ] Cloud deployment options
-- [ ] REST API for remote execution
-- [ ] Web-based dashboard
+- [ ] Advanced web dashboard features (export, sharing)
 - [ ] Multi-objective optimization
+- [ ] Experiment tracking and comparison
 
 ---
 
