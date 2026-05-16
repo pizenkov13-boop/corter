@@ -290,7 +290,7 @@ tui:
 
 ### Additional Resources
 
-- 📄 [**Technical Report**](HACKATHON_REPORT.md) - Comprehensive implementation details
+- 📄 [**Technical Report**](TECHNICAL_REPORT.md) - Comprehensive implementation details
 - 🔧 [**Optimization Guide**](AXIOMCORE_IMPROVEMENTS.md) - Performance tuning recommendations
 - 📋 [**Requirements**](requirements.txt) - Complete dependency list
 

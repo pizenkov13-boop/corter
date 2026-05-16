@@ -571,7 +571,7 @@ The optimized AxiomCore is production-ready with:
 - [`axiomcore.py`](axiomcore.py:1) - Main implementation (960 lines)
 - [`AXIOMCORE_IMPROVEMENTS.md`](AXIOMCORE_IMPROVEMENTS.md:1) - Detailed improvement report
 - [`requirements.txt`](requirements.txt:1) - Dependency specifications
-- [`HACKATHON_REPORT.md`](HACKATHON_REPORT.md:1) - This report
+- [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md:1) - This report
 
 ### 12.2 Code Statistics
 - **Total Lines**: 960 (up from 894)
