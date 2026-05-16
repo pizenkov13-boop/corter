@@ -219,6 +219,11 @@ def update_dashboard_state(data: Dict[str, Any]):
 
 @app.route('/')
 def index():
+    """Landing page"""
+    return render_template('index.html')
+
+@app.route('/dashboard')
+def dashboard():
     """Main dashboard page"""
     return render_template('dashboard.html')
 

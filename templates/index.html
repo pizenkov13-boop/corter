@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AxiomCore - Autonomous ML Optimization Framework</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #32444E;
+            --accent: #FEFD02;
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(254, 253, 2, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(254, 253, 2, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            padding: 40px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5em;
+            font-weight: 800;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav a {
+            color: var(--text-dim);
+            text-decoration: none;
+            margin-left: 40px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 120px 0 80px;
+        }
+
+        .hero h1 {
+            font-size: 4.5em;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 30px;
+            letter-spacing: -2px;
+        }
+
+        .hero h1 .highlight {
+            background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.4em;
+            color: var(--text-dim);
+            margin-bottom: 50px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* CTA Button */
+        .cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--accent);
+            color: var(--bg);
+            padding: 20px 50px;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 10px 40px rgba(254, 253, 2, 0.3);
+        }
+
+        .cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 50px rgba(254, 253, 2, 0.4);
+        }
+
+        .cta::before {
+            content: '⚡';
+            font-size: 1.3em;
+        }
+
+        /* Terminal Block */
+        .terminal {
+            background: #1a2329;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 60px auto;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .terminal-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .terminal-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.8;
+        }
+
+        .terminal-line {
+            display: flex;
+            margin: 8px 0;
+        }
+
+        .terminal-prompt {
+            color: var(--accent);
+            margin-right: 10px;
+            user-select: none;
+        }
+
+        .terminal-command {
+            color: var(--text);
+        }
+
+        .terminal-comment {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        /* Stats Section */
+        .stats {
+            padding: 100px 0;
+            text-align: center;
+        }
+
+        .stats h2 {
+            font-size: 3em;
+            font-weight: 800;
+            margin-bottom: 80px;
+            letter-spacing: -1px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 50px 30px;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent);
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 4em;
+            font-weight: 900;
+            color: var(--accent);
+            margin-bottom: 15px;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+        }
+
+        .features h2 {
+            font-size: 3em;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 80px;
+            letter-spacing: -1px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent);
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            color: var(--text-dim);
+            line-height: 1.7;
+        }
+
+        /* Code Example Section */
+        .code-example {
+            padding: 100px 0;
+            text-align: center;
+        }
+
+        .code-example h2 {
+            font-size: 3em;
+            font-weight: 800;
+            margin-bottom: 50px;
+            letter-spacing: -1px;
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 0;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            margin-top: 100px;
+        }
+
+        footer p {
+            color: var(--text-dim);
+            margin-bottom: 20px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .footer-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5em;
+            }
+
+            .hero p {
+                font-size: 1.1em;
+            }
+
+            .stats-grid,
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 0 20px;
+            }
+
+            nav {
+                display: none;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero,
+        .stats,
+        .features,
+        .code-example {
+            animation: fadeInUp 0.8s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="logo">⚡ Axiom<span>Core</span></a>
+            <nav>
+                <a href="/dashboard">Dashboard</a>
+                <a href="https://github.com/yourusername/axiomcore">GitHub</a>
+                <a href="#features">Features</a>
+                <a href="#stats">Performance</a>
+            </nav>
+        </header>
+
+        <section class="hero">
+            <h1>
+                Autonomous ML<br>
+                <span class="highlight">Optimization Framework</span>
+            </h1>
+            <p>
+                Enterprise-grade hyperparameter optimization and explainability.<br>
+                No cloud required. No GPU farm needed.
+            </p>
+            <a href="#install" class="cta">pip install axiomcore</a>
+        </section>
+
+        <div class="terminal" id="install">
+            <div class="terminal-header">
+                <div class="terminal-dot"></div>
+                <div class="terminal-dot"></div>
+                <div class="terminal-dot"></div>
+            </div>
+            <div class="terminal-content">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-command">pip install axiomcore</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-command">python</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">></span>
+                    <span class="terminal-command">from axiomcore import AxiomCore</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">></span>
+                    <span class="terminal-command">core = AxiomCore.from_yaml("config.yaml")</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">></span>
+                    <span class="terminal-command">result = core.run("data.csv")</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-comment"># ⚡ 5x faster HPO with parallel execution</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-comment"># 🔍 Advanced XAI with SHAP integration</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-comment"># 📊 Beautiful web dashboard included</span>
+                </div>
+            </div>
+        </div>
+
+        <section class="stats" id="stats">
+            <h2>Performance That Matters</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">5×</div>
+                    <div class="stat-label">Faster HPO</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">3×</div>
+                    <div class="stat-label">Faster XAI</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">Optimizations</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features" id="features">
+            <h2>Built for ML Engineers</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Hyperparameter Optimization</h3>
+                    <p>Multiple strategies including random search, differential evolution, and local optimization. Parallel execution with intelligent early stopping.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Explainable AI</h3>
+                    <p>SHAP integration, permutation importance, mutual information analysis, and drift detection. Understand your models deeply.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Web Dashboard</h3>
+                    <p>Beautiful browser-based interface with real-time progress tracking, interactive charts, and live insights. No terminal required.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Production Ready</h3>
+                    <p>Robust error handling, backward compatibility, comprehensive documentation, and Railway deployment support out of the box.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="code-example">
+            <h2>Get Started in Seconds</h2>
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-dot"></div>
+                    <div class="terminal-dot"></div>
+                    <div class="terminal-dot"></div>
+                </div>
+                <div class="terminal-content">
+                    <div class="terminal-line">
+                        <span class="terminal-comment"># Create config.yaml</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-command">task: classification</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-command">target_column: target</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-command">hpo:</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-command">  strategy: random</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-command">  n_trials: 24</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-command">  parallel_trials: 4</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-command">  enable_early_stop: true</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-comment"># Run optimization</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command">python axiomcore_web.py config.yaml data.csv</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-comment"># 🎉 View results at http://localhost:5000</span>
+                    </div>
+                </div>
+            </div>
+            <a href="/dashboard" class="cta" style="margin-top: 40px;">View Live Dashboard</a>
+        </section>
+
+        <footer>
+            <p>Open-source ML optimization framework</p>
+            <p style="color: var(--accent); font-weight: 600;">Made for ML engineers, by ML engineers</p>
+            <div class="footer-links">
+                <a href="https://github.com/yourusername/axiomcore">GitHub</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="https://github.com/yourusername/axiomcore/blob/main/README.md">Documentation</a>
+                <a href="https://github.com/yourusername/axiomcore/blob/main/TECHNICAL_REPORT.md">Technical Report</a>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
