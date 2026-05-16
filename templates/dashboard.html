@@ -487,9 +487,15 @@
         }
 
         .insight-item::before {
-            content: '💡';
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
             margin-right: 10px;
-            font-size: 1.2em;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23FEFD02' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41'/%3E%3Ccircle cx='12' cy='12' r='5'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            vertical-align: middle;
         }
 
         /* Logs */
@@ -628,7 +634,12 @@
         <div class="header">
             <div class="header-content">
                 <div class="header-left">
-                    <h1>⚡ AxiomCore</h1>
+                    <h1>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FEFD02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                        AxiomCore
+                    </h1>
                     <p>Autonomous ML Optimization Platform</p>
                 </div>
                 <div class="header-right">
@@ -663,7 +674,12 @@
         <div class="grid">
             <!-- HPO Progress Card -->
             <div class="card">
-                <h2>🚀 Optimization Progress</h2>
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FEFD02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    Optimization Progress
+                </h2>
                 
                 <div class="metric">
                     <span class="metric-label">Strategy</span>
@@ -696,7 +712,12 @@
 
             <!-- Chart Card -->
             <div class="card">
-                <h2>📈 Performance Chart</h2>
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FEFD02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    Performance Chart
+                </h2>
                 <div class="chart-container">
                     <canvas id="score-chart"></canvas>
                 </div>
@@ -706,7 +727,13 @@
         <div class="grid">
             <!-- Current Parameters -->
             <div class="card">
-                <h2>⚙️ Current Parameters</h2>
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FEFD02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m0 6l4.2 4.2M23 12h-6m-6 0H1m18.2 5.2l-4.2-4.2m0-6l4.2-4.2"></path>
+                    </svg>
+                    Current Parameters
+                </h2>
                 <div class="params-grid" id="current-params">
                     <div class="param-item">
                         <div class="param-name">Waiting</div>
@@ -717,7 +744,13 @@
 
             <!-- Best Parameters -->
             <div class="card">
-                <h2>🏆 Best Parameters</h2>
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FEFD02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                        <circle cx="12" cy="8" r="7"></circle>
+                        <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                    </svg>
+                    Best Parameters
+                </h2>
                 <div class="params-grid" id="best-params">
                     <div class="param-item">
                         <div class="param-name">Waiting</div>
@@ -730,7 +763,13 @@
         <div class="grid">
             <!-- Feature Importance -->
             <div class="card">
-                <h2>🔍 Feature Importance</h2>
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FEFD02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    Feature Importance
+                </h2>
                 <ul class="feature-list" id="feature-list">
                     <li class="feature-item">
                         <span class="feature-name">No features analyzed yet</span>
@@ -740,7 +779,13 @@
 
             <!-- Insights -->
             <div class="card">
-                <h2>💡 AI Insights</h2>
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FEFD02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                        <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                        <circle cx="12" cy="12" r="5"></circle>
+                    </svg>
+                    AI Insights
+                </h2>
                 <ul class="insights-list" id="insights-list">
                     <li class="insight-item">Waiting for analysis to begin...</li>
                 </ul>
@@ -749,7 +794,16 @@
 
         <!-- Logs -->
         <div class="card grid-full">
-            <h2>📝 System Logs</h2>
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FEFD02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                System Logs
+            </h2>
             <div class="logs-container" id="logs-container">
                 <div class="log-entry">
                     <span class="log-time">[00:00:00]</span>
