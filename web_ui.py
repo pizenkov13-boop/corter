@@ -293,12 +293,12 @@ def toggle_demo():
     
     return jsonify({'status': 'success', 'demo_enabled': demo_mode['enabled']})
 
+# Start demo mode thread when module loads (for Railway/production)
+demo_thread = threading.Thread(target=demo_mode_loop, daemon=True)
+demo_thread.start()
+
 def run_server(host='127.0.0.1', port=5000, debug=False):
     """Run the Flask server"""
-    # Start demo mode thread
-    demo_thread = threading.Thread(target=demo_mode_loop, daemon=True)
-    demo_thread.start()
-    
     app.run(host=host, port=port, debug=debug, threaded=True)
 
 if __name__ == '__main__':
