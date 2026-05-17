@@ -16,6 +16,18 @@
             --max: 980px;
         }
 
+        @property --mouse-x {
+            syntax: "<length>";
+            inherits: false;
+            initial-value: 50vw;
+        }
+
+        @property --mouse-y {
+            syntax: "<length>";
+            inherits: false;
+            initial-value: 50vh;
+        }
+
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         html {
@@ -39,14 +51,21 @@
             inset: 0;
             z-index: 0;
             pointer-events: none;
+            --mouse-x: 50vw;
+            --mouse-y: 50vh;
             background: radial-gradient(
-                520px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-                rgba(245, 237, 227, 0.07) 0%,
-                rgba(245, 237, 227, 0.03) 35%,
-                transparent 70%
+                700px circle at var(--mouse-x) var(--mouse-y),
+                rgba(245, 237, 227, 0.12) 0%,
+                rgba(245, 237, 227, 0.06) 38%,
+                rgba(245, 237, 227, 0.02) 58%,
+                transparent 72%
             );
-            transition: opacity 0.35s ease;
+            transition:
+                opacity 0.3s ease,
+                --mouse-x 0.3s ease,
+                --mouse-y 0.3s ease;
             opacity: 0;
+            will-change: --mouse-x, --mouse-y, opacity;
         }
 
         body.cursor-active .cursor-glow {
@@ -85,28 +104,12 @@
 
         .brand:hover { opacity: 1; }
 
-        .brand-mark {
-            flex-shrink: 0;
-            width: 56px;
-            height: 56px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 14px;
-            background: rgba(245, 237, 227, 0.06);
-            border: 1px solid rgba(245, 237, 227, 0.18);
-            box-shadow:
-                0 0 0 1px rgba(245, 237, 227, 0.06) inset,
-                0 8px 32px rgba(0, 0, 0, 0.35),
-                0 0 40px rgba(245, 237, 227, 0.12);
-        }
-
         .brand img {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             display: block;
+            flex-shrink: 0;
             object-fit: contain;
-            filter: drop-shadow(0 2px 8px rgba(245, 237, 227, 0.25));
         }
 
         .brand span {
@@ -342,9 +345,7 @@
     <div class="wrap">
         <header>
             <a href="/" class="brand">
-                <span class="brand-mark">
-                    <img src="/static/logo.svg" alt="" width="44" height="44">
-                </span>
+                <img src="/static/logo.svg" alt="" width="48" height="48">
                 <span>corter</span>
             </a>
             <nav>
