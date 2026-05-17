@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html as html_module
 import json
 import time
 import warnings
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
@@ -165,6 +167,175 @@ def _infer_task(y: np.ndarray) -> str:
 
 def _default_scorer(task: str) -> str:
     return "f1_weighted" if task == "classification" else "neg_mean_squared_error"
+
+
+def _format_report_value(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, float):
+        return f"{value:.6g}"
+    return str(value)
+
+
+def _build_results_report_html(result: Mapping[str, Any], version: str = __version__) -> str:
+    """Build a standalone HTML optimization report."""
+    task = html_module.escape(str(result.get("task", "")))
+    best_score = float(result["best_cv_score"])
+    params = result.get("best_params", {})
+    insights: Sequence[str] = result.get("insights", [])
+    holdout = result.get("holdout_metrics") or {}
+    drift = result.get("drift") or {}
+    trials_df = result.get("trials")
+    feature_report = result.get("feature_report")
+
+    params_rows = "".join(
+        f"<tr><td>{html_module.escape(str(k))}</td>"
+        f"<td>{html_module.escape(_format_report_value(v))}</td></tr>"
+        for k, v in params.items()
+    )
+    if not params_rows:
+        params_rows = "<tr><td colspan=\"2\">No parameters recorded.</td></tr>"
+
+    insights_html = "".join(
+        f"<li>{html_module.escape(str(line))}</li>" for line in insights
+    ) or "<li>No insights generated.</li>"
+
+    metrics_rows = "".join(
+        f"<tr><td>{html_module.escape(str(k))}</td>"
+        f"<td>{html_module.escape(_format_report_value(v))}</td></tr>"
+        for k, v in holdout.items()
+    )
+    if not metrics_rows:
+        metrics_rows = "<tr><td colspan=\"2\">No holdout metrics.</td></tr>"
+
+    drift_rows = "".join(
+        f"<tr><td>{html_module.escape(str(k))}</td>"
+        f"<td>{float(v):.4f}</td></tr>"
+        for k, v in sorted(drift.items(), key=lambda x: x[1], reverse=True)[:15]
+    )
+    drift_section = ""
+    if drift_rows:
+        drift_section = f"""
+        <section>
+            <h2>Drift (top features)</h2>
+            <table><thead><tr><th>Feature</th><th>KS statistic</th></tr></thead>
+            <tbody>{drift_rows}</tbody></table>
+        </section>
+        """
+
+    feature_section = ""
+    if feature_report is not None and not feature_report.empty:
+        fr = feature_report.head(15)
+        cols = ["feature", "perm_mean"]
+        if "shap_importance" in fr.columns:
+            cols.append("shap_importance")
+        header = "".join(f"<th>{html_module.escape(c)}</th>" for c in cols)
+        body = ""
+        for _, row in fr.iterrows():
+            cells = "".join(
+                f"<td>{html_module.escape(_format_report_value(row[c]))}</td>" for c in cols
+            )
+            body += f"<tr>{cells}</tr>"
+        feature_section = f"""
+        <section>
+            <h2>Feature importance (top {len(fr)})</h2>
+            <table><thead><tr>{header}</tr></thead><tbody>{body}</tbody></table>
+        </section>
+        """
+
+    n_trials = len(trials_df) if trials_df is not None and hasattr(trials_df, "__len__") else 0
+    generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corter — Optimization Report</title>
+  <style>
+    :root {{ --bg: #141210; --fg: #F9EFE6; --muted: rgba(249,239,230,0.55); --border: rgba(249,239,230,0.14); }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--fg); margin: 0; padding: 48px 24px;
+      line-height: 1.5;
+    }}
+    .wrap {{ max-width: 720px; margin: 0 auto; }}
+    h1 {{ font-size: 1.75rem; font-weight: 600; letter-spacing: -0.03em; margin: 0 0 8px; }}
+    .meta {{ color: var(--muted); font-size: 0.875rem; margin-bottom: 40px; }}
+    h2 {{
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin: 32px 0 16px;
+    }}
+    .score {{
+      font-size: 2.5rem; font-weight: 600; letter-spacing: -0.04em;
+      margin: 8px 0 24px;
+    }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 0.9375rem; }}
+    th, td {{
+      text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border);
+    }}
+    th {{ color: var(--muted); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; }}
+    ul {{ margin: 0; padding-left: 1.25rem; }}
+    li {{ margin: 10px 0; color: var(--muted); }}
+    li strong {{ color: var(--fg); }}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Corter optimization report</h1>
+    <p class="meta">Generated {html_module.escape(generated)} · v{html_module.escape(version)} · task: {task} · trials: {n_trials}</p>
+
+    <h2>Best CV score</h2>
+    <p class="score">{best_score:.4f}</p>
+
+    <section>
+      <h2>Best parameters</h2>
+      <table><thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+      <tbody>{params_rows}</tbody></table>
+    </section>
+
+    <section>
+      <h2>Holdout metrics</h2>
+      <table><thead><tr><th>Metric</th><th>Value</th></tr></thead>
+      <tbody>{metrics_rows}</tbody></table>
+    </section>
+
+    {feature_section}
+
+    <section>
+      <h2>XAI insights</h2>
+      <ul>{insights_html}</ul>
+    </section>
+
+    {drift_section}
+  </div>
+</body>
+</html>
+"""
+
+
+def _write_pdf_from_html(html_content: str, pdf_path: Path) -> bool:
+    """Render HTML to PDF using xhtml2pdf or weasyprint if available."""
+    try:
+        from xhtml2pdf import pisa
+
+        with pdf_path.open("wb") as dest:
+            status = pisa.CreatePDF(html_content, dest=dest, encoding="utf-8")
+        return status.err == 0
+    except ImportError:
+        pass
+    except Exception:
+        return False
+
+    try:
+        from weasyprint import HTML
+
+        HTML(string=html_content).write_pdf(str(pdf_path))
+        return True
+    except ImportError:
+        return False
+    except Exception:
+        return False
 
 
 def _task_from_params(params: Dict[str, Any]) -> str:
@@ -1124,6 +1295,10 @@ class Corter:
         data: Union[str, Path, pd.DataFrame],
         test_size: float = 0.2,
         reference_data: Optional[Union[str, Path, pd.DataFrame]] = None,
+        export_reports: bool = True,
+        export_pdf: bool = False,
+        report_html_path: Union[str, Path] = "results_report.html",
+        report_pdf_path: Union[str, Path] = "results_report.pdf",
     ) -> Dict[str, Any]:
         X_train, X_test, y_train, y_test, feature_names, task = self._load_xy(data, test_size)
 
@@ -1168,7 +1343,55 @@ class Corter:
             "drift": self.xai.drift_scores_,
             "model": self.hpo.best_estimator_,
         }
+
+        if export_reports:
+            report_paths = self.export_results_reports(
+                html_path=report_html_path,
+                pdf_path=report_pdf_path,
+                export_pdf=export_pdf,
+            )
+            self.result_["report_paths"] = report_paths
+
         return self.result_
+
+    def export_html_report(self, path: Union[str, Path] = "results_report.html") -> Path:
+        """Write optimization results to a standalone HTML report."""
+        if not self.result_:
+            raise RuntimeError("No run results to export. Call run() first.")
+        path = Path(path)
+        path.write_text(_build_results_report_html(self.result_), encoding="utf-8")
+        return path
+
+    def export_pdf_report(self, path: Union[str, Path] = "results_report.pdf") -> Optional[Path]:
+        """Write PDF report from the HTML template; returns path if successful."""
+        if not self.result_:
+            raise RuntimeError("No run results to export. Call run() first.")
+        path = Path(path)
+        html_content = _build_results_report_html(self.result_)
+        if _write_pdf_from_html(html_content, path):
+            return path
+        return None
+
+    def export_results_reports(
+        self,
+        html_path: Union[str, Path] = "results_report.html",
+        pdf_path: Union[str, Path] = "results_report.pdf",
+        export_pdf: bool = False,
+    ) -> Dict[str, Optional[Path]]:
+        """Export HTML report and optionally PDF after a run."""
+        html_out = self.export_html_report(html_path)
+        self.console.print(f"[dim]HTML report saved to {html_out}[/]")
+        pdf_out: Optional[Path] = None
+        if export_pdf:
+            pdf_out = self.export_pdf_report(pdf_path)
+            if pdf_out is not None:
+                self.console.print(f"[dim]PDF report saved to {pdf_out}[/]")
+            else:
+                self.console.print(
+                    "[yellow]PDF export skipped — install xhtml2pdf or weasyprint "
+                    "(pip install corter-ml[reports])[/]"
+                )
+        return {"html": html_out, "pdf": pdf_out}
 
     def export_report(self, path: Union[str, Path]) -> None:
         """Serialize run artifacts to JSON (trials + insights; not the model)."""

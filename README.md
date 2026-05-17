@@ -148,7 +148,7 @@ corter run data.csv --web          # optimization + dashboard
 corter run data.csv -c other.yaml
 ```
 
-Results are written to `results.json` by default.
+Results are written to `results.json` by default. After each run, Corter also writes **`results_report.html`** (best score, parameters, holdout metrics, feature importance, insights). Optional PDF: `core.run(data, export_pdf=True)` or `pip install corter-ml[reports]`.
 
 ### 3. Python API
 
