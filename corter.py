@@ -73,6 +73,7 @@ class HPOConfig:
     # Parallel execution parameters
     parallel_trials: int = 4  # Number of trials to run in parallel (0 = sequential)
     n_jobs: int = -1  # Number of CPU cores for joblib (-1 = all cores)
+    checkpoint_path: Optional[str] = "corter_checkpoint.json"  # None to disable resumable runs
 
 
 @dataclass
@@ -167,6 +168,17 @@ def _infer_task(y: np.ndarray) -> str:
 
 def _default_scorer(task: str) -> str:
     return "f1_weighted" if task == "classification" else "neg_mean_squared_error"
+
+
+_CHECKPOINT_VERSION = 1
+
+
+def _checkpoint_json_default(obj: Any) -> Any:
+    if isinstance(obj, (np.integer, np.floating)):
+        return obj.item()
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 def _format_report_value(value: Any) -> str:
@@ -530,6 +542,108 @@ class HyperparameterAutopilot:
         # Early stopping tracking
         self._no_improvement_count: int = 0
         self._best_score_history: List[float] = []
+        self._checkpoint_resumed: bool = False
+
+    def _checkpoint_file(self) -> Optional[Path]:
+        path = self.config.checkpoint_path
+        if not path or not str(path).strip():
+            return None
+        return Path(str(path))
+
+    def _trials_completed(self) -> int:
+        return len(self.trials)
+
+    def _next_trial_id(self) -> int:
+        return self._trials_completed() + 1
+
+    def _rebuild_best_from_trials(self) -> None:
+        if self.trials.empty:
+            self.best_score_ = float("-inf")
+            self.best_params_ = {}
+            self.best_estimator_ = None
+            return
+        meta = {"trial", "score", "elapsed_s"}
+        param_cols = [c for c in self.trials.columns if c not in meta]
+        best_idx = self.trials["score"].idxmax()
+        best_row = self.trials.loc[best_idx]
+        self.best_score_ = float(best_row["score"])
+        self.best_params_ = {col: best_row[col] for col in param_cols}
+        self.best_estimator_ = clone(self.estimator).set_params(**self.best_params_)
+
+    def _save_checkpoint(self, completed: bool = False) -> None:
+        path = self._checkpoint_file()
+        if path is None:
+            return
+        meta_cols = {"trial", "score", "elapsed_s"}
+        param_cols = [c for c in self.trials.columns if c not in meta_cols]
+        trials_records: List[Dict[str, Any]] = []
+        if not self.trials.empty:
+            for _, row in self.trials.iterrows():
+                rec: Dict[str, Any] = {
+                    "trial": int(row["trial"]),
+                    "score": float(row["score"]),
+                    "elapsed_s": float(row["elapsed_s"]),
+                }
+                for col in param_cols:
+                    val = row[col]
+                    if pd.isna(val):
+                        rec[col] = None
+                    elif isinstance(val, (np.integer, np.floating)):
+                        rec[col] = val.item()
+                    else:
+                        rec[col] = val
+                trials_records.append(rec)
+        payload = {
+            "version": _CHECKPOINT_VERSION,
+            "completed": completed,
+            "strategy": self.config.strategy,
+            "n_trials": self.config.n_trials,
+            "task": self.task,
+            "random_state": self.config.random_state,
+            "best_score": self.best_score_,
+            "best_params": self.best_params_,
+            "no_improvement_count": self._no_improvement_count,
+            "best_score_history": list(self._best_score_history),
+            "trials": trials_records,
+        }
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps(payload, indent=2, default=_checkpoint_json_default), encoding="utf-8")
+        tmp.replace(path)
+
+    def _load_checkpoint(self) -> bool:
+        path = self._checkpoint_file()
+        if path is None or not path.is_file():
+            return False
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            self.console.print(f"[yellow]Ignoring invalid checkpoint ({exc})[/]")
+            return False
+        if payload.get("completed"):
+            return False
+        if payload.get("version") != _CHECKPOINT_VERSION:
+            self.console.print("[yellow]Checkpoint version mismatch; starting fresh[/]")
+            return False
+        if payload.get("strategy", "").lower() != self.config.strategy.lower():
+            self.console.print("[yellow]Checkpoint strategy mismatch; starting fresh[/]")
+            return False
+        if int(payload.get("n_trials", -1)) != self.config.n_trials:
+            self.console.print("[yellow]Checkpoint n_trials mismatch; starting fresh[/]")
+            return False
+        if payload.get("task") != self.task:
+            self.console.print("[yellow]Checkpoint task mismatch; starting fresh[/]")
+            return False
+        trials_records = payload.get("trials", [])
+        if trials_records:
+            self.trials = pd.DataFrame(trials_records)
+        self.best_score_ = float(payload.get("best_score", float("-inf")))
+        self.best_params_ = dict(payload.get("best_params", {}))
+        self._no_improvement_count = int(payload.get("no_improvement_count", 0))
+        self._best_score_history = [float(x) for x in payload.get("best_score_history", [])]
+        self._rebuild_best_from_trials()
+        self._checkpoint_resumed = True
+        return True
 
     def _cv_score(self, params: Mapping[str, Any], X: np.ndarray, y: np.ndarray) -> float:
         est = clone(self.estimator)
@@ -570,6 +684,7 @@ class HyperparameterAutopilot:
             self.best_score_ = score
             self.best_params_ = dict(params)
             self.best_estimator_ = clone(self.estimator).set_params(**params)
+        self._save_checkpoint(completed=False)
 
     def _check_early_stop(self) -> bool:
         """Check if early stopping criteria met."""
@@ -594,17 +709,28 @@ class HyperparameterAutopilot:
                 "min_samples_leaf": {"low": 1, "high": 8, "type": "int"},
             }
 
-        strategy = self.config.strategy.lower()
-        if strategy == "random":
-            self._fit_random(X, y, space, on_trial)
-        elif strategy in {"bayesian", "bo", "tpe"}:
-            self._fit_bayesian(X, y, space, on_trial)
-        elif strategy in {"scipy_de", "de"}:
-            self._fit_scipy_de(X, y, space, on_trial)
-        elif strategy in {"scipy_local", "local"}:
-            self._fit_scipy_local(X, y, space, on_trial)
+        if self._load_checkpoint():
+            done = self._trials_completed()
+            self.console.print(
+                f"[dim]Resumed from checkpoint — {done}/{self.config.n_trials} trials already complete[/]"
+            )
+
+        if self._trials_completed() >= self.config.n_trials:
+            self.console.print("[dim]Checkpoint already has all trials; skipping HPO[/]")
         else:
-            raise ValueError(f"Unknown HPO strategy '{self.config.strategy}'")
+            strategy = self.config.strategy.lower()
+            if strategy == "random":
+                self._fit_random(X, y, space, on_trial)
+            elif strategy in {"bayesian", "bo", "tpe"}:
+                self._fit_bayesian(X, y, space, on_trial)
+            elif strategy in {"scipy_de", "de"}:
+                self._fit_scipy_de(X, y, space, on_trial)
+            elif strategy in {"scipy_local", "local"}:
+                self._fit_scipy_local(X, y, space, on_trial)
+            else:
+                raise ValueError(f"Unknown HPO strategy '{self.config.strategy}'")
+
+        self._save_checkpoint(completed=True)
 
         if self.best_estimator_ is not None:
             pipe = Pipeline([("scaler", StandardScaler()), ("model", self.best_estimator_)])
@@ -633,7 +759,8 @@ class HyperparameterAutopilot:
         on_trial: Optional[Callable[[int, float, Dict], None]],
     ) -> None:
         """Sequential random search (original implementation)."""
-        for trial in range(1, self.config.n_trials + 1):
+        start = self._next_trial_id()
+        for trial in range(start, self.config.n_trials + 1):
             t0 = time.perf_counter()
             params = self._sample_params(space)
             score = self._cv_score(params, X, y)
@@ -659,7 +786,8 @@ class HyperparameterAutopilot:
             batch_size = self.config.parallel_trials
             
             # Process trials in batches
-            for batch_start in range(1, self.config.n_trials + 1, batch_size):
+            first_trial = self._next_trial_id()
+            for batch_start in range(first_trial, self.config.n_trials + 1, batch_size):
                 batch_end = min(batch_start + batch_size, self.config.n_trials + 1)
                 trial_ids = list(range(batch_start, batch_end))
                 
@@ -730,7 +858,7 @@ class HyperparameterAutopilot:
             t0 = time.perf_counter()
             params = {key: self._suggest_param(trial, key, spec) for key, spec in space.items()}
             score = self._cv_score(params, X, y)
-            trial_id = trial.number + 1
+            trial_id = self._next_trial_id()
             self._log_trial(trial_id, params, score, time.perf_counter() - t0)
             self._best_score_history.append(self.best_score_)
             if on_trial:
@@ -750,9 +878,12 @@ class HyperparameterAutopilot:
                     f"(no improvement for {self.config.patience} trials)[/]"
                 )
 
+        remaining = max(0, self.config.n_trials - self._trials_completed())
+        if remaining == 0:
+            return
         study.optimize(
             objective,
-            n_trials=self.config.n_trials,
+            n_trials=remaining,
             callbacks=[_early_stop_callback],
             show_progress_bar=False,
         )
@@ -790,19 +921,23 @@ class HyperparameterAutopilot:
         if not bounds:
             return self._fit_random(X, y, space, on_trial)
 
-        trial_counter = {"n": 0}
-
         def objective(vec: np.ndarray) -> float:
-            trial_counter["n"] += 1
+            if self._trials_completed() >= self.config.n_trials:
+                return -self.best_score_
+            trial_id = self._next_trial_id()
             t0 = time.perf_counter()
             params = self._vector_to_params(vec, keys, meta, space)
             score = self._cv_score(params, X, y)
-            self._log_trial(trial_counter["n"], params, score, time.perf_counter() - t0)
+            self._log_trial(trial_id, params, score, time.perf_counter() - t0)
+            self._best_score_history.append(self.best_score_)
             if on_trial:
-                on_trial(trial_counter["n"], score, params)
+                on_trial(trial_id, score, params)
             return -score
 
-        maxiter = max(1, self.config.n_trials // max(1, len(bounds)))
+        remaining = max(0, self.config.n_trials - self._trials_completed())
+        if remaining == 0:
+            return
+        maxiter = max(1, remaining // max(1, len(bounds)))
         differential_evolution(
             objective,
             bounds=bounds,
@@ -825,19 +960,22 @@ class HyperparameterAutopilot:
             return self._fit_random(X, y, space, on_trial)
 
         x0 = np.array([(lo + hi) / 2 for lo, hi in bounds])
-        trial_counter = {"n": 0}
 
         def objective(vec: np.ndarray) -> float:
-            trial_counter["n"] += 1
+            if self._trials_completed() >= self.config.n_trials:
+                return -self.best_score_
+            trial_id = self._next_trial_id()
             t0 = time.perf_counter()
             params = self._vector_to_params(vec, keys, meta, space)
             score = self._cv_score(params, X, y)
-            self._log_trial(trial_counter["n"], params, score, time.perf_counter() - t0)
+            self._log_trial(trial_id, params, score, time.perf_counter() - t0)
+            self._best_score_history.append(self.best_score_)
             if on_trial:
-                on_trial(trial_counter["n"], score, params)
+                on_trial(trial_id, score, params)
             return -score
 
-        for _ in range(self.config.n_trials):
+        remaining = max(0, self.config.n_trials - self._trials_completed())
+        for _ in range(remaining):
             minimize(objective, x0=x0 + self._rng.normal(0, 0.05, size=x0.shape), method="Nelder-Mead", options={"maxiter": 40})
 
 
