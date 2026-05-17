@@ -85,6 +85,9 @@ class XAIConfig:
     # SHAP configuration
     use_shap: bool = True  # Enable SHAP analysis (requires shap package)
     shap_sample_size: int = 100  # Subsample for SHAP computation efficiency
+    explanation_snapshots_path: Optional[str] = "explanation_snapshots.json"  # None to disable
+    snapshot_permutation_repeats: int = 3  # Lighter repeats for per-trial snapshots
+    snapshot_top_k: int = 5  # Top features recorded per trial snapshot
 
 
 @dataclass
@@ -171,6 +174,7 @@ def _default_scorer(task: str) -> str:
 
 
 _CHECKPOINT_VERSION = 1
+_EXPLANATION_SNAPSHOTS_VERSION = 1
 
 
 def _checkpoint_json_default(obj: Any) -> Any:
@@ -1117,6 +1121,72 @@ class SemanticDiagnostics:
             self.insights_.extend(self._drift_narrative(self.drift_scores_))
         return self
 
+    def trial_snapshot(
+        self,
+        estimator: BaseEstimator,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: Sequence[str],
+        trial_id: int,
+        score: float,
+        params: Mapping[str, Any],
+    ) -> Dict[str, Any]:
+        """Lightweight per-trial feature importance and insight snapshot."""
+        n_features = X.shape[1]
+        names = list(feature_names) if feature_names else [f"f{i}" for i in range(n_features)]
+        est = clone(estimator).set_params(**dict(params))
+        pipe = Pipeline([("scaler", StandardScaler()), ("model", est)])
+        repeats = max(1, self.config.snapshot_permutation_repeats)
+        top_k = max(1, self.config.snapshot_top_k)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            pipe.fit(X, y)
+            perm = permutation_importance(
+                pipe, X, y, n_repeats=repeats, random_state=0, n_jobs=1,
+            )
+
+        mi_func = mutual_info_classif if self.task == "classification" else mutual_info_regression
+        mi = mi_func(X, y, random_state=0)
+        report = pd.DataFrame(
+            {
+                "feature": names,
+                "perm_mean": perm.importances_mean,
+                "perm_std": perm.importances_std,
+                "mutual_info": mi,
+            }
+        ).sort_values("perm_mean", ascending=False)
+
+        inner = pipe.named_steps["model"]
+        insights = self._build_insights(report, inner)
+        top = report.head(top_k)
+        top_features = [
+            {
+                "rank": rank,
+                "name": str(row["feature"]),
+                "importance": float(row["perm_mean"]),
+            }
+            for rank, (_, row) in enumerate(top.iterrows(), start=1)
+        ]
+
+        serializable_params: Dict[str, Any] = {}
+        for key, val in params.items():
+            if val is None or (isinstance(val, float) and np.isnan(val)):
+                serializable_params[key] = None
+            elif isinstance(val, (np.integer, np.floating)):
+                serializable_params[key] = val.item()
+            else:
+                serializable_params[key] = val
+
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "trial": int(trial_id),
+            "score": float(score),
+            "params": serializable_params,
+            "top_features": top_features,
+            "insights": insights,
+        }
+
     def _population_drift(
         self,
         ref: np.ndarray,
@@ -1428,6 +1498,67 @@ class Corter:
         tr, te = idx[:split], idx[split:]
         return X[tr], X[te], y[tr], y[te], feature_names, task
 
+    def _explanation_snapshots_path(self) -> Optional[Path]:
+        path = self.config.xai.explanation_snapshots_path
+        if not path or not str(path).strip():
+            return None
+        return Path(str(path))
+
+    def _hpo_checkpoint_resuming(self) -> bool:
+        ckpt = self.config.hpo.checkpoint_path
+        if not ckpt or not str(ckpt).strip():
+            return False
+        path = Path(str(ckpt))
+        if not path.is_file():
+            return False
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return False
+        return not payload.get("completed", False)
+
+    def init_explanation_snapshots(self, clear: bool = True) -> None:
+        """Initialize or reset the explanation snapshots JSON file."""
+        path = self._explanation_snapshots_path()
+        if path is None:
+            return
+        if clear or not path.is_file():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {"version": _EXPLANATION_SNAPSHOTS_VERSION, "snapshots": []}
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def append_explanation_snapshot(
+        self,
+        trial_id: int,
+        score: float,
+        params: Mapping[str, Any],
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: Sequence[str],
+    ) -> None:
+        """Append a per-trial XAI snapshot to the explanation snapshots JSON file."""
+        path = self._explanation_snapshots_path()
+        if path is None:
+            return
+        if self.xai is None:
+            self.xai = SemanticDiagnostics(self.config.xai, self.config.task or "classification", self.console)
+        snapshot = self.xai.trial_snapshot(
+            self.estimator, X, y, feature_names, trial_id, score, params,
+        )
+        if path.is_file():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                data = {"version": _EXPLANATION_SNAPSHOTS_VERSION, "snapshots": []}
+        else:
+            data = {"version": _EXPLANATION_SNAPSHOTS_VERSION, "snapshots": []}
+        if data.get("version") != _EXPLANATION_SNAPSHOTS_VERSION:
+            data = {"version": _EXPLANATION_SNAPSHOTS_VERSION, "snapshots": []}
+        data.setdefault("snapshots", []).append(snapshot)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps(data, indent=2, default=_checkpoint_json_default), encoding="utf-8")
+        tmp.replace(path)
+
     def run(
         self,
         data: Union[str, Path, pd.DataFrame],
@@ -1448,10 +1579,14 @@ class Corter:
 
         self.hpo = HyperparameterAutopilot(self.estimator, self.config.hpo, task, self.console)
         self.xai = SemanticDiagnostics(self.config.xai, task, self.console)
+        self.init_explanation_snapshots(clear=not self._hpo_checkpoint_resuming())
 
-        def trial_callback(trial: int, score: float, _params: Dict) -> None:
+        def trial_callback(trial: int, score: float, params: Dict) -> None:
             if self.hpo is not None:
                 self.dashboard.on_trial(trial, score, self.hpo.trials)
+            self.append_explanation_snapshot(
+                trial, score, params, X_train, y_train, feature_names,
+            )
 
         if self.config.tui.show_live:
             self.dashboard.set_phase("HPO running", self.config.hpo.n_trials)
