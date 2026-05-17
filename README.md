@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ AxiomCore
+# ⚡ Corter
 
 ### Autonomous ML Optimization Framework
 
@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![GitHub Stars](https://img.shields.io/github/stars/pizenkov13-boop/AxiomCore?style=social)](https://github.com/pizenkov13-boop/AxiomCore)
+[![GitHub Stars](https://img.shields.io/github/stars/pizenkov13-boop/Corter?style=social)](https://github.com/pizenkov13-boop/Corter)
 
 [Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Benchmarks](#-performance-benchmarks) • [Contributing](#-contributing)
 
@@ -18,11 +18,11 @@
 
 ---
 
-## 🎯 What is AxiomCore?
+## 🎯 What is Corter?
 
-AxiomCore is a **production-ready ML optimization framework** that brings enterprise-grade hyperparameter tuning and explainable AI to your local machine. Built for data scientists who need **fast, reliable, and interpretable** model optimization without the complexity of cloud infrastructure.
+Corter is a **production-ready ML optimization framework** that brings enterprise-grade hyperparameter tuning and explainable AI to your local machine. Built for data scientists who need **fast, reliable, and interpretable** model optimization without the complexity of cloud infrastructure.
 
-### Why AxiomCore?
+### Why Corter?
 
 - 🚀 **Blazing Fast**: Parallel trial execution with intelligent early stopping
 - 🎨 **Beautiful TUI**: Real-time progress tracking with Rich terminal interface
@@ -69,14 +69,14 @@ AxiomCore is a **production-ready ML optimization framework** that brings enterp
 ### Quick Install
 
 ```bash
-pip install axiomcore-ml
+pip install corter-ml
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/pizenkov13-boop/AxiomCore.git
-cd AxiomCore
+git clone https://github.com/pizenkov13-boop/Corter.git
+cd Corter
 pip install -e .
 ```
 
@@ -84,20 +84,20 @@ pip install -e .
 
 ```bash
 # Install with XAI support
-pip install axiomcore-ml[xai]
+pip install corter-ml[xai]
 
 # Install with development tools
-pip install axiomcore-ml[dev]
+pip install corter-ml[dev]
 
 # Install everything
-pip install axiomcore-ml[xai,dev]
+pip install corter-ml[xai,dev]
 ```
 
 ### Docker
 
 ```bash
-docker pull ghcr.io/pizenkov13-boop/axiomcore:latest
-docker run -p 5000:5000 ghcr.io/pizenkov13-boop/axiomcore:latest
+docker pull ghcr.io/pizenkov13-boop/corter:latest
+docker run -p 5000:5000 ghcr.io/pizenkov13-boop/corter:latest
 ```
 
 ---
@@ -107,7 +107,7 @@ docker run -p 5000:5000 ghcr.io/pizenkov13-boop/axiomcore:latest
 ### 1. Create Configuration
 
 ```bash
-axiomcore init
+corter init
 ```
 
 This creates a `config.yaml` with sensible defaults:
@@ -138,22 +138,22 @@ xai:
 
 ```bash
 # Basic usage
-axiomcore run data.csv
+corter run data.csv
 
 # With web dashboard
-axiomcore run data.csv --web
+corter run data.csv --web
 
 # Custom config
-axiomcore run data.csv -c custom_config.yaml
+corter run data.csv -c custom_config.yaml
 ```
 
 ### 3. Python API
 
 ```python
-from axiomcore import AxiomCore
+from corter import Corter
 
 # Load configuration
-core = AxiomCore.from_yaml('config.yaml')
+core = Corter.from_yaml('config.yaml')
 
 # Run optimization
 result = core.run('data.csv')
@@ -168,10 +168,10 @@ print(f"Insights: {result['insights']}")
 
 ```bash
 # Start web server
-axiomcore web
+corter web
 
 # Or run with optimization
-axiomcore run data.csv --web
+corter run data.csv --web
 ```
 
 Visit `http://localhost:5000` to see the dashboard.
@@ -184,14 +184,14 @@ Visit `http://localhost:5000` to see the dashboard.
 
 | Framework | Dataset Size | Trials | Time (s) | Speedup |
 |-----------|-------------|--------|----------|---------|
-| **AxiomCore** | 10K rows | 50 | **12.3** | **1.0x** |
+| **Corter** | 10K rows | 50 | **12.3** | **1.0x** |
 | Optuna | 10K rows | 50 | 18.7 | 0.66x |
 | Hyperopt | 10K rows | 50 | 21.4 | 0.57x |
 | Scikit-Optimize | 10K rows | 50 | 25.1 | 0.49x |
 
 ### Accuracy Results
 
-| Model | Dataset | AxiomCore | Baseline | Improvement |
+| Model | Dataset | Corter | Baseline | Improvement |
 |-------|---------|-----------|----------|-------------|
 | Random Forest | Iris | **0.973** | 0.960 | +1.4% |
 | XGBoost | Wine | **0.982** | 0.971 | +1.1% |
@@ -199,7 +199,7 @@ Visit `http://localhost:5000` to see the dashboard.
 
 ### Resource Efficiency
 
-| Metric | AxiomCore | Typical Framework |
+| Metric | Corter | Typical Framework |
 |--------|-----------|-------------------|
 | Memory Usage | **~200 MB** | ~500 MB |
 | CPU Utilization | **85-95%** | 60-70% |
@@ -269,28 +269,28 @@ xai:
 
 ```bash
 # Initialize new project
-axiomcore init
+corter init
 
 # Run optimization
-axiomcore run <data.csv> [options]
+corter run <data.csv> [options]
 
 # Start web dashboard
-axiomcore web [--port 5000] [--host 0.0.0.0]
+corter web [--port 5000] [--host 0.0.0.0]
 
 # Show version
-axiomcore version
+corter version
 ```
 
 ### Python API
 
 ```python
-from axiomcore import AxiomCore
+from corter import Corter
 
 # Create from config
-core = AxiomCore.from_yaml('config.yaml')
+core = Corter.from_yaml('config.yaml')
 
 # Or create programmatically
-core = AxiomCore(
+core = Corter(
     task='classification',
     model_name='random_forest',
     n_trials=50,
@@ -311,7 +311,7 @@ explainer = core.explainer
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                     AxiomCore                           │
+│                     Corter                           │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
@@ -341,8 +341,8 @@ We love contributions! Here's how you can help:
 
 1. **Fork the repository**
    ```bash
-   git clone https://github.com/pizenkov13-boop/AxiomCore.git
-   cd AxiomCore
+   git clone https://github.com/pizenkov13-boop/Corter.git
+   cd Corter
    ```
 
 2. **Create a virtual environment**
@@ -364,8 +364,8 @@ We love contributions! Here's how you can help:
 5. **Make your changes and test**
    ```bash
    pytest tests/
-   black axiomcore.py
-   mypy axiomcore.py
+   black corter.py
+   mypy corter.py
    ```
 
 6. **Commit and push**
@@ -400,14 +400,14 @@ We love contributions! Here's how you can help:
 ### Classification Example
 
 ```python
-from axiomcore import AxiomCore
+from corter import Corter
 import pandas as pd
 
 # Load data
 df = pd.read_csv('iris.csv')
 
 # Configure and run
-core = AxiomCore(
+core = Corter(
     task='classification',
     model_name='random_forest',
     n_trials=30,
@@ -421,10 +421,10 @@ print(f"Accuracy: {result['best_cv_score']:.3f}")
 ### Regression Example
 
 ```python
-from axiomcore import AxiomCore
+from corter import Corter
 
 # Load from config
-core = AxiomCore.from_yaml('regression_config.yaml')
+core = Corter.from_yaml('regression_config.yaml')
 
 # Run with custom scoring
 result = core.run('housing.csv')
@@ -435,13 +435,13 @@ print(f"R² Score: {result['best_cv_score']:.3f}")
 
 ```python
 from flask import Flask, jsonify
-from axiomcore import AxiomCore
+from corter import Corter
 
 app = Flask(__name__)
 
 @app.route('/optimize', methods=['POST'])
 def optimize():
-    core = AxiomCore.from_yaml('config.yaml')
+    core = Corter.from_yaml('config.yaml')
     result = core.run('data.csv')
     return jsonify(result)
 
@@ -459,8 +459,8 @@ if __name__ == '__main__':
 FROM python:3.10-slim
 WORKDIR /app
 COPY . .
-RUN pip install axiomcore-ml
-CMD ["axiomcore", "web", "--host", "0.0.0.0"]
+RUN pip install corter-ml
+CMD ["corter", "web", "--host", "0.0.0.0"]
 ```
 
 ### Railway Deployment
@@ -481,20 +481,20 @@ railway up
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: axiomcore
+  name: corter
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: axiomcore
+      app: corter
   template:
     metadata:
       labels:
-        app: axiomcore
+        app: corter
     spec:
       containers:
-      - name: axiomcore
-        image: ghcr.io/pizenkov13-boop/axiomcore:latest
+      - name: corter
+        image: ghcr.io/pizenkov13-boop/corter:latest
         ports:
         - containerPort: 5000
 ```
@@ -518,15 +518,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 🐛 Issues: [GitHub Issues](https://github.com/pizenkov13-boop/AxiomCore/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/pizenkov13-boop/AxiomCore/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/pizenkov13-boop/Corter/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/pizenkov13-boop/Corter/discussions)
 
 ---
 
 <div align="center">
 
-**Made with ❤️ by the AxiomCore Team**
+**Made with ❤️ by the Corter Team**
 
-[⬆ Back to Top](#-axiomcore)
+[⬆ Back to Top](#-corter)
 
 </div>
