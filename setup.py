@@ -66,7 +66,7 @@ setup(
     },
     include_package_data=True,
     package_data={
-        "": ["templates/*.html", "*.yaml"],
+        "": ["templates/*.html", "static/*", "*.yaml"],
     },
     data_files=[
         ("templates", ["templates/index.html", "templates/dashboard.html"]),

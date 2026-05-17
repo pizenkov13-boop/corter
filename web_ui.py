@@ -1,5 +1,5 @@
 """
-AxiomCore Web UI - Flask Dashboard
+Corter Web UI - Flask Dashboard
 Provides browser-based interface for HPO progress, XAI insights, and metrics
 """
 
@@ -254,7 +254,7 @@ def get_logs():
 
 @app.route('/api/update', methods=['POST'])
 def update_state():
-    """Update dashboard state (called by AxiomCore)"""
+    """Update dashboard state (called by Corter)"""
     data = request.get_json()
     update_dashboard_state(data)
     return jsonify({'status': 'success'})
@@ -302,10 +302,8 @@ def run_server(host='127.0.0.1', port=5000, debug=False):
     app.run(host=host, port=port, debug=debug, threaded=True)
 
 if __name__ == '__main__':
-    print("🚀 Starting AxiomCore Web UI...")
+    print("🚀 Starting Corter Web UI...")
     print("📊 Dashboard available at: http://127.0.0.1:5000")
     print("🎬 Demo mode: ENABLED (showing simulated optimization)")
     print("💡 Demo mode will auto-disable when real optimization starts")
     run_server(debug=True)
-
-# Made with Bob

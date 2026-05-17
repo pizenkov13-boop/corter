@@ -1,4 +1,4 @@
-# AxiomCore - Autonomous ML Optimization Framework
+# Corter - Autonomous ML Optimization Framework
 # Core Dependencies
 
 # Data manipulation and numerical computing
