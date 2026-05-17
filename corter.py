@@ -58,7 +58,7 @@ __all__ = [
 
 @dataclass
 class HPOConfig:
-    strategy: str = "random"  # random | scipy_de | scipy_local
+    strategy: str = "random"  # random | bayesian | scipy_de | scipy_local
     n_trials: int = 24
     cv_folds: int = 5
     scoring: Optional[str] = None  # auto from task
@@ -307,7 +307,8 @@ class HyperparameterAutopilot:
     Autonomous hyperparameter search with trial logging and convergence tracking.
 
     Strategies:
-      - ``random``: Latin-hypercube style random search over declared bounds
+      - ``random``: Random search over declared bounds
+      - ``bayesian``: Model-based search via Optuna (TPE sampler)
       - ``scipy_de``: Global optimization via ``scipy.optimize.differential_evolution``
       - ``scipy_local``: Local refinement via ``scipy.optimize.minimize`` (Nelder-Mead)
     """
@@ -398,6 +399,8 @@ class HyperparameterAutopilot:
         strategy = self.config.strategy.lower()
         if strategy == "random":
             self._fit_random(X, y, space, on_trial)
+        elif strategy in {"bayesian", "bo", "tpe"}:
+            self._fit_bayesian(X, y, space, on_trial)
         elif strategy in {"scipy_de", "de"}:
             self._fit_scipy_de(X, y, space, on_trial)
         elif strategy in {"scipy_local", "local"}:
@@ -491,6 +494,70 @@ class HyperparameterAutopilot:
             # Fallback to sequential execution on any error
             self.console.print(f"[yellow]Parallel execution failed ({type(e).__name__}), falling back to sequential mode[/]")
             self._fit_random_sequential(X, y, space, on_trial)
+
+    def _suggest_param(self, trial: Any, name: str, spec: Any) -> Any:
+        """Map a search-space entry to an Optuna trial suggestion."""
+        if isinstance(spec, list):
+            return trial.suggest_categorical(name, list(spec))
+        if isinstance(spec, dict) and "low" in spec and "high" in spec:
+            low, high = spec["low"], spec["high"]
+            if spec.get("type") == "int":
+                return trial.suggest_int(name, int(low), int(high))
+            return trial.suggest_float(
+                name,
+                float(low),
+                float(high),
+                log=bool(spec.get("log", False)),
+            )
+        return spec
+
+    def _fit_bayesian(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        space: Mapping[str, Any],
+        on_trial: Optional[Callable[[int, float, Dict], None]],
+    ) -> None:
+        """Bayesian-style optimization using Optuna's TPE sampler."""
+        try:
+            import optuna
+        except ImportError as exc:
+            raise ImportError(
+                "Bayesian HPO requires Optuna. Install with: pip install optuna"
+            ) from exc
+
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+        def objective(trial: optuna.Trial) -> float:
+            t0 = time.perf_counter()
+            params = {key: self._suggest_param(trial, key, spec) for key, spec in space.items()}
+            score = self._cv_score(params, X, y)
+            trial_id = trial.number + 1
+            self._log_trial(trial_id, params, score, time.perf_counter() - t0)
+            self._best_score_history.append(self.best_score_)
+            if on_trial:
+                on_trial(trial_id, score, params)
+            return score
+
+        study = optuna.create_study(
+            direction="maximize",
+            sampler=optuna.samplers.TPESampler(seed=self.config.random_state),
+        )
+
+        def _early_stop_callback(study: optuna.Study, trial: optuna.trial.FrozenTrial) -> None:
+            if self._check_early_stop():
+                study.stop()
+                self.console.print(
+                    f"[yellow]Early stopping at trial {trial.number + 1}/{self.config.n_trials} "
+                    f"(no improvement for {self.config.patience} trials)[/]"
+                )
+
+        study.optimize(
+            objective,
+            n_trials=self.config.n_trials,
+            callbacks=[_early_stop_callback],
+            show_progress_bar=False,
+        )
 
     def _continuous_bounds(self, space: Mapping[str, Any]) -> Tuple[List[Tuple[float, float]], List[str], List[Mapping]]:
         bounds: List[Tuple[float, float]] = []

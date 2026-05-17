@@ -66,6 +66,9 @@ setup(
         "xai": [
             "shap>=0.42.0",
         ],
+        "bayesian": [
+            "optuna>=3.0.0",
+        ],
     },
     entry_points={
         "console_scripts": [
