@@ -10,5 +10,3 @@ __license__ = "MIT"
 from corter_pkg import cli
 
 __all__ = ['cli', '__version__']
-
-# Made with Bob

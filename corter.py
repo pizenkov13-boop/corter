@@ -140,20 +140,70 @@ def _default_scorer(task: str) -> str:
     return "f1_weighted" if task == "classification" else "neg_mean_squared_error"
 
 
+def _task_from_params(params: Dict[str, Any]) -> str:
+    return str(params.pop("_task", "classification"))
+
+
+def _is_tree_estimator(est: BaseEstimator) -> bool:
+    """Whether SHAP TreeExplainer is appropriate for this fitted estimator."""
+    if hasattr(est, "tree_") or hasattr(est, "estimators_"):
+        return True
+    tree_types = (
+        "XGBClassifier",
+        "XGBRegressor",
+        "LGBMClassifier",
+        "LGBMRegressor",
+        "CatBoostClassifier",
+        "CatBoostRegressor",
+        "Booster",
+    )
+    return type(est).__name__ in tree_types or hasattr(est, "get_booster")
+
+
 def _resolve_estimator(model_cfg: Mapping[str, Any]) -> BaseEstimator:
-    """Instantiate sklearn estimator from config ``{name, params}``."""
+    """Instantiate estimator from config ``{name, params}`` (sklearn or boosting libs)."""
     name = str(model_cfg.get("name", "random_forest")).lower()
     params = dict(model_cfg.get("params", {}))
+    task = _task_from_params(params)
+    classification = task == "classification"
 
     if name in {"rf", "random_forest", "randomforestclassifier", "randomforestregressor"}:
         from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
-        cls = RandomForestClassifier if params.pop("_task", "classification") == "classification" else RandomForestRegressor
+        cls = RandomForestClassifier if classification else RandomForestRegressor
         return cls(**params)
     if name in {"gbm", "gradient_boosting", "gradientboostingclassifier", "gradientboostingregressor"}:
         from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
 
-        cls = GradientBoostingClassifier if params.pop("_task", "classification") == "classification" else GradientBoostingRegressor
+        cls = GradientBoostingClassifier if classification else GradientBoostingRegressor
+        return cls(**params)
+    if name in {"xgboost", "xgb", "xgbclassifier", "xgbregressor"}:
+        try:
+            from xgboost import XGBClassifier, XGBRegressor
+        except ImportError as exc:
+            raise ImportError(
+                "XGBoost is not installed. Install with: pip install xgboost"
+            ) from exc
+        cls = XGBClassifier if classification else XGBRegressor
+        return cls(**params)
+    if name in {"lightgbm", "lgbm", "lgb", "lgbmclassifier", "lgbmregressor"}:
+        try:
+            from lightgbm import LGBMClassifier, LGBMRegressor
+        except ImportError as exc:
+            raise ImportError(
+                "LightGBM is not installed. Install with: pip install lightgbm"
+            ) from exc
+        cls = LGBMClassifier if classification else LGBMRegressor
+        return cls(**params)
+    if name in {"catboost", "cb", "catboostclassifier", "catboostregressor"}:
+        try:
+            from catboost import CatBoostClassifier, CatBoostRegressor
+        except ImportError as exc:
+            raise ImportError(
+                "CatBoost is not installed. Install with: pip install catboost"
+            ) from exc
+        cls = CatBoostClassifier if classification else CatBoostRegressor
+        params.setdefault("verbose", False)
         return cls(**params)
     if name in {"logreg", "logistic", "logisticregression"}:
         from sklearn.linear_model import LogisticRegression
@@ -617,8 +667,7 @@ class SemanticDiagnostics:
                 self.console.print(f"[dim]Computing SHAP values (sample size: {sample_size})...[/]")
                 
                 # Create appropriate explainer based on model type
-                if hasattr(est, 'tree_') or hasattr(est, 'estimators_'):
-                    # Tree-based models (RandomForest, GradientBoosting, etc.)
+                if _is_tree_estimator(est):
                     explainer = shap.TreeExplainer(est)
                     shap_values = explainer.shap_values(X_sample)
                 else:
