@@ -109,7 +109,7 @@ def run_optimization(args):
         print("🚀 Starting optimization...")
         print()
         
-        result = core.run(args.data)
+        result = core.run(args.data, export_reports=True, export_pdf=False)
         
         # Print results
         print()
@@ -138,6 +138,9 @@ def run_optimization(args):
         
         print()
         print(f"💾 Results saved to: {args.output}")
+        report_paths = result.get("report_paths") or {}
+        if report_paths.get("html"):
+            print(f"📄 HTML report: {report_paths['html']}")
         
         if args.web:
             print()

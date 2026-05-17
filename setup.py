@@ -69,6 +69,9 @@ setup(
         "bayesian": [
             "optuna>=3.0.0",
         ],
+        "reports": [
+            "xhtml2pdf>=0.2.11",
+        ],
     },
     entry_points={
         "console_scripts": [
