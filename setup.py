@@ -47,8 +47,16 @@ setup(
         "requests>=2.31.0",
         "psutil>=5.9.0",
         "gunicorn>=21.2.0",
+        "xgboost>=2.0.0",
+        "lightgbm>=4.0.0",
+        "catboost>=1.2.0",
     ],
     extras_require={
+        "boosting": [
+            "xgboost>=2.0.0",
+            "lightgbm>=4.0.0",
+            "catboost>=1.2.0",
+        ],
         "dev": [
             "pytest>=7.4.0",
             "pytest-cov>=4.1.0",
