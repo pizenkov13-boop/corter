@@ -1,7 +1,7 @@
-# AxiomCore ML Optimization Framework
+# Corter ML Optimization Framework
 ## Technical Report
 
-**Project**: AxiomCore - Autonomous ML Optimization Framework
+**Project**: Corter - Autonomous ML Optimization Framework
 **Description**: Open-source autonomous ML optimization framework for ML engineers. No cloud required, no GPU farm needed.
 **Date**: May 15, 2026
 **Version**: 0.2.0 (Optimized)
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This report documents the comprehensive optimization and enhancement of AxiomCore, an open-source autonomous machine learning optimization framework designed for ML engineers who need powerful optimization without cloud dependencies or GPU farms. Through systematic analysis and implementation of cutting-edge techniques, we achieved **3-5x performance improvements** in hyperparameter optimization and **2x speedup** in explainability analysis, while adding advanced SHAP-based interpretability features.
+This report documents the comprehensive optimization and enhancement of Corter, an open-source autonomous machine learning optimization framework designed for ML engineers who need powerful optimization without cloud dependencies or GPU farms. Through systematic analysis and implementation of cutting-edge techniques, we achieved **3-5x performance improvements** in hyperparameter optimization and **2x speedup** in explainability analysis, while adding advanced SHAP-based interpretability features.
 
 ### Key Achievements
 - ✅ **5 Major Optimizations Implemented**
@@ -24,7 +24,7 @@ This report documents the comprehensive optimization and enhancement of AxiomCor
 ## 1. Project Analysis Phase
 
 ### 1.1 Initial Assessment
-**Objective**: Analyze [`axiomcore.py`](axiomcore.py:1) to identify optimization opportunities in three core modules:
+**Objective**: Analyze [`corter.py`](corter.py:1) to identify optimization opportunities in three core modules:
 - HPO (Hyperparameter Optimization) Module
 - XAI (Explainable AI) Diagnostics Layer
 - TUI (Terminal User Interface) Dashboard
@@ -36,7 +36,7 @@ This report documents the comprehensive optimization and enhancement of AxiomCor
 - Best practices evaluation
 
 ### 1.2 Findings Summary
-Created comprehensive improvement report ([`AXIOMCORE_IMPROVEMENTS.md`](AXIOMCORE_IMPROVEMENTS.md:1)) documenting:
+Created comprehensive improvement report ([`CORTER_IMPROVEMENTS.md`](CORTER_IMPROVEMENTS.md:1)) documenting:
 - 14 optimization opportunities identified
 - Performance impact estimates for each
 - Implementation complexity assessments
@@ -61,9 +61,9 @@ enable_early_stop: bool = True # Toggle feature on/off
 ```
 
 **Key Components**:
-- [`_check_early_stop()`](axiomcore.py:253) - Convergence detection algorithm
-- [`_best_score_history`](axiomcore.py:222) - Score tracking for trend analysis
-- [`_no_improvement_count`](axiomcore.py:222) - Patience counter
+- [`_check_early_stop()`](corter.py:253) - Convergence detection algorithm
+- [`_best_score_history`](corter.py:222) - Score tracking for trend analysis
+- [`_no_improvement_count`](corter.py:222) - Patience counter
 
 **Algorithm**:
 1. Track best score after each trial
@@ -121,7 +121,7 @@ def _cache_key(self, X: np.ndarray, y: np.ndarray) -> str:
 
 **Technical Implementation**:
 ```python
-# Added to AxiomDashboard (lines 603-627)
+# Added to CorterDashboard (lines 603-627)
 def _create_sparkline(self, values: List[float], width: int = 40) -> str:
     """Create ASCII sparkline from values using Unicode block characters."""
     blocks = "▁▂▃▄▅▆▇█"  # Unicode block characters
@@ -263,7 +263,7 @@ pip install -r requirements.txt
 ```
 
 ### 3.2 Comprehensive Documentation
-Created [`AXIOMCORE_IMPROVEMENTS.md`](AXIOMCORE_IMPROVEMENTS.md:1) containing:
+Created [`CORTER_IMPROVEMENTS.md`](CORTER_IMPROVEMENTS.md:1) containing:
 - 14 optimization opportunities
 - Implementation priorities
 - Code examples
@@ -274,6 +274,8 @@ Created [`AXIOMCORE_IMPROVEMENTS.md`](AXIOMCORE_IMPROVEMENTS.md:1) containing:
 ---
 
 ## 4. Performance Benchmarks
+
+*Benchmarks based on internal testing on synthetic data. Results may vary.*
 
 ### 4.1 HPO Module Performance
 
@@ -414,10 +416,10 @@ xai:
 
 ### 7.1 Basic Usage
 ```python
-from axiomcore import AxiomCore
+from corter import Corter
 
 # Load configuration
-core = AxiomCore.from_yaml("config.yaml")
+core = Corter.from_yaml("config.yaml")
 
 # Run optimization with all enhancements
 result = core.run("data.csv")
@@ -542,7 +544,7 @@ Smart explainer selection:
 ## 11. Conclusion
 
 ### 11.1 Summary of Achievements
-This project successfully optimized AxiomCore across all three core modules:
+This project successfully optimized Corter across all three core modules:
 
 1. **HPO Module**: 5x faster through parallel execution and early stopping
 2. **XAI Module**: 3x faster through caching, enhanced with SHAP
@@ -556,7 +558,7 @@ This project successfully optimized AxiomCore across all three core modules:
 - ✅ **Maintainability**: Clean code with comprehensive docs
 
 ### 11.3 Production Readiness
-The optimized AxiomCore is production-ready with:
+The optimized Corter is production-ready with:
 - Backward-compatible API
 - Comprehensive error handling
 - Configurable performance/accuracy tradeoffs
@@ -568,8 +570,8 @@ The optimized AxiomCore is production-ready with:
 ## 12. Appendix
 
 ### 12.1 File Manifest
-- [`axiomcore.py`](axiomcore.py:1) - Main implementation (960 lines)
-- [`AXIOMCORE_IMPROVEMENTS.md`](AXIOMCORE_IMPROVEMENTS.md:1) - Detailed improvement report
+- [`corter.py`](corter.py:1) - Main implementation (960 lines)
+- [`CORTER_IMPROVEMENTS.md`](CORTER_IMPROVEMENTS.md:1) - Detailed improvement report
 - [`requirements.txt`](requirements.txt:1) - Dependency specifications
 - [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md:1) - This report
 
@@ -589,6 +591,6 @@ The optimized AxiomCore is production-ready with:
 ---
 
 **Report Generated**: May 15, 2026
-**Project**: AxiomCore - Open-Source ML Optimization Framework
+**Project**: Corter - Open-Source ML Optimization Framework
 **Tagline**: Autonomous ML optimization for engineers. No cloud required, no GPU farm needed.
 **Status**: ✅ Complete and Production Ready

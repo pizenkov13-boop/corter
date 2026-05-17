@@ -4,15 +4,13 @@
 
 ### Autonomous ML Optimization Framework
 
-*No cloud required. No GPU farm needed. Just pure ML intelligence.*
+*Local hyperparameter search and explainability — no cloud required.*
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 [![GitHub Stars](https://img.shields.io/github/stars/pizenkov13-boop/Corter?style=social)](https://github.com/pizenkov13-boop/Corter)
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Benchmarks](#-performance-benchmarks) • [Contributing](#-contributing)
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
 </div>
 
@@ -20,59 +18,70 @@
 
 ## 🎯 What is Corter?
 
-Corter is a **production-ready ML optimization framework** that brings enterprise-grade hyperparameter tuning and explainable AI to your local machine. Built for data scientists who need **fast, reliable, and interpretable** model optimization without the complexity of cloud infrastructure.
+Corter runs hyperparameter search on tabular CSV data, fits a scikit-learn model with the best settings, and reports feature importance and short text insights. Everything runs on your machine via the CLI, Python API, or optional Flask web dashboard.
 
 ### Why Corter?
 
-- 🚀 **Blazing Fast**: Parallel trial execution with intelligent early stopping
-- 🎨 **Beautiful TUI**: Real-time progress tracking with Rich terminal interface
-- 🌐 **Web Dashboard**: Modern Flask-based UI for monitoring and visualization
-- 🔍 **Explainable AI**: Built-in SHAP integration for model interpretability
-- ⚙️ **Zero Config**: Sensible defaults that just work out of the box
-- 🐳 **Production Ready**: Docker support, CI/CD pipelines, and deployment configs
+- **CLI workflow** — `corter init`, `corter run`, `corter web`
+- **YAML configuration** — task, model, HPO, and XAI settings in one file
+- **Terminal UI** — live progress with Rich during optimization
+- **Web dashboard** — monitor runs at `http://localhost:5000` when using `--web` or `corter web`
+- **Explainability** — permutation importance; optional SHAP when `corter-ml[xai]` is installed
 
 ---
 
 ## ✨ Features
 
-### Core Capabilities
+### Hyperparameter optimization
 
-- **Intelligent Hyperparameter Optimization**
-  - Random search with adaptive sampling
-  - Bayesian optimization support
-  - Early stopping with patience-based convergence
-  - Parallel trial execution for maximum throughput
+- Random search over a YAML-defined search space
+- Bayesian optimization (`bayesian`) via Optuna TPE sampler (`pip install optuna` or `corter-ml[bayesian]`)
+- SciPy global (`scipy_de`) and local (`scipy_local`) strategies
+- Parallel trials via joblib
+- Early stopping when scores stop improving
 
-- **Explainable AI (XAI)**
-  - SHAP value computation for feature importance
-  - Permutation importance analysis
-  - Automated insight generation
-  - Visual explanations for model decisions
+### Models
 
-- **Real-Time Monitoring**
-  - Live terminal UI with progress bars
-  - Web dashboard with interactive charts
-  - Trial history and performance tracking
-  - Resource utilization monitoring
+Supported `model.name` values:
 
-- **Production Features**
-  - YAML-based configuration
-  - Comprehensive logging
-  - Model persistence
-  - REST API for integration
-  - Docker containerization
+| Name | Aliases |
+|------|---------|
+| `random_forest` | `rf` |
+| `gradient_boosting` | `gbm` |
+| `xgboost` | `xgb` |
+| `lightgbm` | `lgbm`, `lgb` |
+| `catboost` | `cb` |
+| `logistic_regression` | `logreg`, `logistic` |
+| `ridge` | |
+| `svc` | `svm` |
+
+Classification vs regression is chosen from `task` in config (or inferred when `task: auto`).
+
+Numeric feature columns are used automatically; specify `target_column` in config.
+
+### Explainability
+
+- Permutation importance (always)
+- SHAP values when `shap` is installed (`pip install corter-ml[xai]`)
+- Drift checks and generated insight strings
+
+### Interfaces
+
+- **CLI** — `corter init`, `run`, `web`, `version`
+- **Python** — `Corter.from_yaml(...)` and `core.run("data.csv")`
+- **Web UI** — Flask app in `web_ui.py`; `corter_web.py` pushes live updates during a run
 
 ---
 
 ## 📦 Installation
 
-### Quick Install
+### From PyPI (when published)
 
 ```bash
 pip install corter-ml
 ```
 
-### From Source
+### From source
 
 ```bash
 git clone https://github.com/pizenkov13-boop/Corter.git
@@ -80,37 +89,25 @@ cd Corter
 pip install -e .
 ```
 
-### With Optional Dependencies
+### Optional extras
 
 ```bash
-# Install with XAI support
-pip install corter-ml[xai]
-
-# Install with development tools
-pip install corter-ml[dev]
-
-# Install everything
-pip install corter-ml[xai,dev]
-```
-
-### Docker
-
-```bash
-docker pull ghcr.io/pizenkov13-boop/corter:latest
-docker run -p 5000:5000 ghcr.io/pizenkov13-boop/corter:latest
+pip install corter-ml[xai]       # SHAP support
+pip install corter-ml[bayesian]  # Optuna for strategy: bayesian
+pip install corter-ml[dev]       # pytest, black, mypy
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Create Configuration
+### 1. Create configuration
 
 ```bash
 corter init
 ```
 
-This creates a `config.yaml` with sensible defaults:
+Example `config.yaml`:
 
 ```yaml
 task: classification
@@ -122,404 +119,178 @@ model:
     n_estimators: 100
 
 hpo:
-  strategy: random
+  strategy: random          # random | bayesian | scipy_de | scipy_local
   n_trials: 24
   parallel_trials: 4
   enable_early_stop: true
   cv_folds: 5
   scoring: accuracy
+  search_space:
+    n_estimators:
+      low: 50
+      high: 200
+      type: int
 
 xai:
   use_shap: true
   top_k_features: 10
+
+tui:
+  show_live: true
+  refresh_hz: 4
 ```
 
-### 2. Run Optimization
+### 2. Run optimization
 
 ```bash
-# Basic usage
 corter run data.csv
-
-# With web dashboard
-corter run data.csv --web
-
-# Custom config
-corter run data.csv -c custom_config.yaml
+corter run data.csv --web          # optimization + dashboard
+corter run data.csv -c other.yaml
 ```
+
+Results are written to `results.json` by default.
 
 ### 3. Python API
 
 ```python
 from corter import Corter
 
-# Load configuration
-core = Corter.from_yaml('config.yaml')
+core = Corter.from_yaml("config.yaml")
+result = core.run("data.csv")
 
-# Run optimization
-result = core.run('data.csv')
-
-# Access results
-print(f"Best Score: {result['best_cv_score']:.4f}")
-print(f"Best Params: {result['best_params']}")
-print(f"Insights: {result['insights']}")
+print(result["best_cv_score"])
+print(result["best_params"])
+print(result["insights"])
 ```
 
-### 4. Web Dashboard
+### 4. Web dashboard only
 
 ```bash
-# Start web server
 corter web
-
-# Or run with optimization
-corter run data.csv --web
+# open http://127.0.0.1:5000
 ```
 
-Visit `http://localhost:5000` to see the dashboard.
-
----
-
-## 📊 Performance Benchmarks
-
-### Speed Comparison
-
-| Framework | Dataset Size | Trials | Time (s) | Speedup |
-|-----------|-------------|--------|----------|---------|
-| **Corter** | 10K rows | 50 | **12.3** | **1.0x** |
-| Optuna | 10K rows | 50 | 18.7 | 0.66x |
-| Hyperopt | 10K rows | 50 | 21.4 | 0.57x |
-| Scikit-Optimize | 10K rows | 50 | 25.1 | 0.49x |
-
-### Accuracy Results
-
-| Model | Dataset | Corter | Baseline | Improvement |
-|-------|---------|-----------|----------|-------------|
-| Random Forest | Iris | **0.973** | 0.960 | +1.4% |
-| XGBoost | Wine | **0.982** | 0.971 | +1.1% |
-| LightGBM | Digits | **0.989** | 0.978 | +1.1% |
-
-### Resource Efficiency
-
-| Metric | Corter | Typical Framework |
-|--------|-----------|-------------------|
-| Memory Usage | **~200 MB** | ~500 MB |
-| CPU Utilization | **85-95%** | 60-70% |
-| Parallel Efficiency | **92%** | 75% |
-
-*Benchmarks run on: Intel i7-9700K, 16GB RAM, Python 3.10*
+During `corter run data.csv --web`, the dashboard receives live updates from the optimizer.
 
 ---
 
 ## 📖 Documentation
 
-### Configuration Options
-
-<details>
-<summary><b>Task Configuration</b></summary>
+### Task configuration
 
 ```yaml
-task: classification  # or 'regression'
-target_column: target
-test_size: 0.2
-random_state: 42
+task: auto                  # auto | classification | regression
+target_column: target       # default: last column
 ```
-</details>
 
-<details>
-<summary><b>Model Configuration</b></summary>
-
-```yaml
-model:
-  name: random_forest  # xgboost, lightgbm, logistic_regression, etc.
-  params:
-    n_estimators: 100
-    max_depth: 10
-    min_samples_split: 2
-```
-</details>
-
-<details>
-<summary><b>HPO Configuration</b></summary>
+### HPO configuration
 
 ```yaml
 hpo:
-  strategy: random  # or 'bayesian'
+  strategy: random          # random | bayesian | scipy_de | scipy_local
   n_trials: 50
   parallel_trials: 4
   enable_early_stop: true
   patience: 5
   min_delta: 0.001
   cv_folds: 5
-  scoring: accuracy  # or 'f1', 'roc_auc', 'r2', etc.
+  scoring: accuracy         # or f1_weighted, neg_mean_squared_error, etc.
+  search_space: { ... }
 ```
-</details>
 
-<details>
-<summary><b>XAI Configuration</b></summary>
+### XAI configuration
 
 ```yaml
 xai:
-  use_shap: true
+  use_shap: true            # requires corter-ml[xai]
   shap_sample_size: 100
   top_k_features: 10
-  permutation_repeats: 10
+  permutation_repeats: 8
+  drift_threshold: 0.15
 ```
-</details>
 
-### CLI Commands
+### CLI reference
 
 ```bash
-# Initialize new project
-corter init
-
-# Run optimization
-corter run <data.csv> [options]
-
-# Start web dashboard
-corter web [--port 5000] [--host 0.0.0.0]
-
-# Show version
+corter init [-o config.yaml]
+corter run <data.csv> [-c config.yaml] [--web] [--output results.json]
+corter web [--host 127.0.0.1] [--port 5000]
 corter version
 ```
 
-### Python API
+### Direct module usage
 
-```python
-from corter import Corter
-
-# Create from config
-core = Corter.from_yaml('config.yaml')
-
-# Or create programmatically
-core = Corter(
-    task='classification',
-    model_name='random_forest',
-    n_trials=50,
-    parallel_trials=4
-)
-
-# Run optimization
-result = core.run('data.csv')
-
-# Access components
-optimizer = core.optimizer
-explainer = core.explainer
+```bash
+python corter.py data.csv -c config.yaml
+python corter_web.py config.yaml data.csv   # optimization with web updates
+gunicorn web_ui:app                         # production-style web only (see Procfile)
 ```
+
+---
+
+## 📊 Performance notes
+
+Internal runs on **synthetic tabular data** (~1k samples, Random Forest, 50 trials, 8-core CPU):
+
+| HPO configuration | Time | vs sequential |
+|-------------------|------|---------------|
+| Sequential | 180s | 1.0× |
+| + early stopping | 108s | 1.7× |
+| + parallel (4 workers) | 45s | 4.0× |
+| Combined | 36s | 5.0× |
+
+XAI re-analysis on synthetic data (~1k × 50 features): caching reduced repeat runs from ~90s to ~15–27s on subsequent passes.
+
+*Benchmarks based on internal testing on synthetic data. Results may vary.*
+
+Full methodology: [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md).
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Corter                           │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │   CLI/API    │  │  Web Server  │  │   REST API   │ │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘ │
-│         │                 │                  │         │
-│  ┌──────▼─────────────────▼──────────────────▼──────┐ │
-│  │           Core Optimization Engine                │ │
-│  │  • HPO Manager  • Model Registry  • Config Mgr   │ │
-│  └──────┬─────────────────┬──────────────────┬──────┘ │
-│         │                 │                  │         │
-│  ┌──────▼──────┐   ┌──────▼──────┐   ┌──────▼──────┐ │
-│  │ Hyperparameter│   │   Model     │   │  Explainer  │ │
-│  │  Optimizer    │   │  Trainer    │   │   (XAI)     │ │
-│  └───────────────┘   └─────────────┘   └─────────────┘ │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│                   Corter                     │
+├──────────────────────────────────────────────┤
+│  CLI (corter_pkg)  │  corter.py  │  web_ui  │
+├────────────────────┴─────────────┴──────────┤
+│  HyperparameterAutopilot  →  fit best model │
+│  SemanticDiagnostics      →  insights       │
+│  CorterDashboard (Rich TUI)                 │
+└──────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 🤝 Contributing
 
-We love contributions! Here's how you can help:
-
-### Getting Started
-
-1. **Fork the repository**
-   ```bash
-   git clone https://github.com/pizenkov13-boop/Corter.git
-   cd Corter
-   ```
-
-2. **Create a virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install development dependencies**
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-4. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-
-5. **Make your changes and test**
-   ```bash
-   pytest tests/
-   black corter.py
-   mypy corter.py
-   ```
-
-6. **Commit and push**
-   ```bash
-   git commit -m "Add amazing feature"
-   git push origin feature/amazing-feature
-   ```
-
-7. **Open a Pull Request**
-
-### Development Guidelines
-
-- **Code Style**: We use [Black](https://github.com/psf/black) for formatting
-- **Type Hints**: Add type annotations for all functions
-- **Tests**: Write tests for new features (pytest)
-- **Documentation**: Update docs for API changes
-- **Commits**: Use clear, descriptive commit messages
-
-### Areas We Need Help
-
-- 🐛 Bug fixes and issue resolution
-- 📚 Documentation improvements
-- ✨ New optimization strategies
-- 🎨 UI/UX enhancements
-- 🧪 Additional test coverage
-- 🌍 Internationalization
-
----
-
-## 📝 Examples
-
-### Classification Example
-
-```python
-from corter import Corter
-import pandas as pd
-
-# Load data
-df = pd.read_csv('iris.csv')
-
-# Configure and run
-core = Corter(
-    task='classification',
-    model_name='random_forest',
-    n_trials=30,
-    parallel_trials=4
-)
-
-result = core.run(df)
-print(f"Accuracy: {result['best_cv_score']:.3f}")
-```
-
-### Regression Example
-
-```python
-from corter import Corter
-
-# Load from config
-core = Corter.from_yaml('regression_config.yaml')
-
-# Run with custom scoring
-result = core.run('housing.csv')
-print(f"R² Score: {result['best_cv_score']:.3f}")
-```
-
-### Web Integration
-
-```python
-from flask import Flask, jsonify
-from corter import Corter
-
-app = Flask(__name__)
-
-@app.route('/optimize', methods=['POST'])
-def optimize():
-    core = Corter.from_yaml('config.yaml')
-    result = core.run('data.csv')
-    return jsonify(result)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-```
-
----
-
-## 🔧 Deployment
-
-### Docker Deployment
-
-```dockerfile
-FROM python:3.10-slim
-WORKDIR /app
-COPY . .
-RUN pip install corter-ml
-CMD ["corter", "web", "--host", "0.0.0.0"]
-```
-
-### Railway Deployment
-
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
-
-# Deploy
-railway login
-railway init
-railway up
-```
-
-### Kubernetes
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: corter
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: corter
-  template:
-    metadata:
-      labels:
-        app: corter
-    spec:
-      containers:
-      - name: corter
-        image: ghcr.io/pizenkov13-boop/corter:latest
-        ports:
-        - containerPort: 5000
-```
+1. Fork and clone the repository
+2. `pip install -e ".[dev]"`
+3. Make changes and run formatters/tests as appropriate
+4. Open a pull request
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
 ---
 
 ## 🙏 Acknowledgments
 
-- Built with [scikit-learn](https://scikit-learn.org/) for ML algorithms
-- Powered by [SHAP](https://github.com/slundberg/shap) for explainability
-- UI powered by [Rich](https://github.com/Textualize/rich) and [Flask](https://flask.palletsprojects.com/)
-- Inspired by [Optuna](https://optuna.org/) and [FastAPI](https://fastapi.tiangolo.com/)
+- [scikit-learn](https://scikit-learn.org/) — models and metrics
+- [SHAP](https://github.com/slundberg/shap) — optional explainability
+- [Rich](https://github.com/Textualize/rich) — terminal UI
+- [Flask](https://flask.palletsprojects.com/) — web dashboard
 
 ---
 
 ## 📞 Support
 
-- 🐛 Issues: [GitHub Issues](https://github.com/pizenkov13-boop/Corter/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/pizenkov13-boop/Corter/discussions)
+- [GitHub Issues](https://github.com/pizenkov13-boop/Corter/issues)
+- [GitHub Discussions](https://github.com/pizenkov13-boop/Corter/discussions)
 
 ---
 
