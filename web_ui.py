@@ -3,7 +3,7 @@ Corter Web UI - Flask Dashboard
 Provides browser-based interface for HPO progress, XAI insights, and metrics
 """
 
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_cors import CORS
 import json
 import threading
@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import pandas as pd
 
-app = Flask(__name__)
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="/static")
 CORS(app)
 
 # Global state for dashboard data
@@ -216,6 +218,12 @@ def update_dashboard_state(data: Dict[str, Any]):
         })
         # Keep only last 100 logs
         dashboard_state['logs'] = dashboard_state['logs'][-100:]
+
+@app.route("/static/logo.svg")
+def logo_svg():
+    """Serve brand logo."""
+    return send_from_directory(STATIC_DIR, "logo.svg", mimetype="image/svg+xml")
+
 
 @app.route('/')
 def index():
