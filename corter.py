@@ -130,6 +130,33 @@ def load_config(path: Union[str, Path]) -> CorterConfig:
 # ---------------------------------------------------------------------------
 
 
+_CANONICAL_TARGET_NAMES = ("target", "label", "y")
+
+
+def _detect_target_column(df: pd.DataFrame, configured: Optional[str] = None) -> str:
+    """
+    Resolve the target column name.
+
+    If ``configured`` is set, that column is used. Otherwise prefers columns named
+    ``target``, ``label``, or ``y`` (case-insensitive), then falls back to the last column.
+    """
+    if configured is not None and str(configured).strip():
+        name = str(configured).strip()
+        if name not in df.columns:
+            raise ValueError(
+                f"Target column '{name}' not found in dataset. "
+                f"Available columns: {list(df.columns)}"
+            )
+        return name
+
+    by_lower = {str(col).lower(): col for col in df.columns}
+    for candidate in _CANONICAL_TARGET_NAMES:
+        if candidate in by_lower:
+            return str(by_lower[candidate])
+
+    return str(df.columns[-1])
+
+
 def _infer_task(y: np.ndarray) -> str:
     if y.dtype.kind in {"i", "u", "b", "f"} and len(np.unique(y)) <= max(20, int(0.05 * len(y))):
         return "classification"
@@ -1066,9 +1093,9 @@ class Corter:
         else:
             df = data.copy()
 
-        target = self.config.target_column or df.columns[-1]
-        if target not in df.columns:
-            raise ValueError(f"Target column '{target}' not found in dataset.")
+        target = _detect_target_column(df, self.config.target_column)
+        if not self.config.target_column:
+            self.config.target_column = target
 
         feature_names = [c for c in df.columns if c != target]
         X = df[feature_names].select_dtypes(include=[np.number]).to_numpy(dtype=float)
@@ -1103,7 +1130,7 @@ class Corter:
         X_ref = None
         if reference_data is not None:
             ref_df = pd.read_csv(reference_data) if isinstance(reference_data, (str, Path)) else reference_data
-            target = self.config.target_column or ref_df.columns[-1]
+            target = _detect_target_column(ref_df, self.config.target_column)
             X_ref = ref_df.drop(columns=[target]).select_dtypes(include=[np.number]).to_numpy(dtype=float)
 
         self.hpo = HyperparameterAutopilot(self.estimator, self.config.hpo, task, self.console)

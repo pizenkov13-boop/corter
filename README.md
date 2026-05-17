@@ -57,7 +57,7 @@ Supported `model.name` values:
 
 Classification vs regression is chosen from `task` in config (or inferred when `task: auto`).
 
-Numeric feature columns are used automatically; specify `target_column` in config.
+Numeric feature columns are used automatically. If `target_column` is omitted, Corter uses a column named `target`, `label`, or `y` (case-insensitive), otherwise the **last column** in the CSV.
 
 ### Explainability
 
@@ -180,7 +180,7 @@ During `corter run data.csv --web`, the dashboard receives live updates from the
 
 ```yaml
 task: auto                  # auto | classification | regression
-target_column: target       # default: last column
+target_column: target       # optional: auto-detect target/label/y or last column
 ```
 
 ### HPO configuration
