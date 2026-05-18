@@ -47,9 +47,6 @@ setup(
         "requests>=2.31.0",
         "psutil>=5.9.0",
         "gunicorn>=21.2.0",
-        "xgboost>=2.0.0",
-        "lightgbm>=4.0.0",
-        "catboost>=1.2.0",
     ],
     extras_require={
         "boosting": [
@@ -83,7 +80,7 @@ setup(
         "": ["templates/*.html", "static/logo.svg", "*.yaml"],
     },
     data_files=[
-        ("templates", ["templates/index.html", "templates/dashboard.html"]),
+        ("templates", ["templates/index.html", "templates/dashboard.html", "templates/compare.html"]),
     ],
     zip_safe=False,
     keywords="machine-learning ml optimization hyperparameter-tuning explainable-ai xai automl",

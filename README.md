@@ -39,6 +39,8 @@ Corter runs hyperparameter search on tabular CSV data, fits a scikit-learn model
 - SciPy global (`scipy_de`) and local (`scipy_local`) strategies
 - Parallel trials via joblib
 - Early stopping when scores stop improving
+- Resumable runs — progress saved to `corter_checkpoint.json` after each trial (set `checkpoint_path: null` to disable)
+- Per-trial explanation snapshots — feature importance and insights appended to `explanation_snapshots.json` after each trial
 
 ### Models
 
@@ -52,6 +54,8 @@ Supported `model.name` values:
 | `lightgbm` | `lgbm`, `lgb` |
 | `catboost` | `cb` |
 | `logistic_regression` | `logreg`, `logistic` |
+
+XGBoost, LightGBM, and CatBoost require the boosting extra: `pip install corter-ml[boosting]`
 | `ridge` | |
 | `svc` | `svm` |
 
@@ -92,6 +96,7 @@ pip install -e .
 ### Optional extras
 
 ```bash
+pip install corter-ml[boosting]  # XGBoost, LightGBM, CatBoost
 pip install corter-ml[xai]       # SHAP support
 pip install corter-ml[bayesian]  # Optuna for strategy: bayesian
 pip install corter-ml[dev]       # pytest, black, mypy
@@ -196,6 +201,7 @@ hpo:
   cv_folds: 5
   scoring: accuracy         # or f1_weighted, neg_mean_squared_error, etc.
   search_space: { ... }
+  checkpoint_path: corter_checkpoint.json   # resume if interrupted; null to disable
 ```
 
 ### XAI configuration
@@ -207,6 +213,9 @@ xai:
   top_k_features: 10
   permutation_repeats: 8
   drift_threshold: 0.15
+  explanation_snapshots_path: explanation_snapshots.json   # null to disable
+  snapshot_top_k: 5
+  snapshot_permutation_repeats: 3
 ```
 
 ### CLI reference
